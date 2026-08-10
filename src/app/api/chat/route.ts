@@ -1,14 +1,39 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { genreRulesets, chatHistory, wardrobeItems, styleProfiles } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { geminiProvider } from "@/lib/ai/fallback";
 import { buildStylistSystemPrompt } from "@/lib/ai/prompts";
 import { checkRateLimit, chatRateLimit } from "@/lib/cache/rate-limit";
 import { getUserPlan } from "@/lib/stripe/plan";
+
+// GET /api/chat — load persisted chat history for the client
+export async function GET() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Load last 50 messages (newest first from DB, then reverse for chronological display)
+  const rows = await db.query.chatHistory.findMany({
+    where: eq(chatHistory.userId, session.user.id),
+    orderBy: desc(chatHistory.createdAt),
+    limit: 50,
+  });
+
+  // Return oldest-first so the client renders top-to-bottom correctly
+  const messages = rows.reverse().map((row) => ({
+    id: row.id,
+    role: row.role as "user" | "assistant",
+    content: row.message,
+    createdAt: row.createdAt,
+  }));
+
+  return NextResponse.json({ messages });
+}
 
 // POST /api/chat — streaming SSE endpoint for stylist chat
 export async function POST(request: NextRequest) {

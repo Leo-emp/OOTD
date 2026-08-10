@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 interface ChatMessage {
   id: string;
@@ -10,10 +10,36 @@ interface ChatMessage {
 }
 
 // Hook for streaming chat with the AI stylist
+// Loads persisted history on mount so conversations survive refresh
 export function useChat(genreSlug: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Load chat history from the server on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/chat");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data.messages?.length) return;
+        setMessages(data.messages.map((m: { id: string; role: string; content: string }) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          isStreaming: false,
+        })));
+      } catch {
+        // Silently fail — empty chat is fine as fallback
+      } finally {
+        if (!cancelled) setIsLoadingHistory(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const sendMessage = useCallback(async (content: string, imageBase64?: string) => {
     // Add user message immediately
@@ -111,5 +137,5 @@ export function useChat(genreSlug: string) {
     setIsStreaming(false);
   }, []);
 
-  return { messages, isStreaming, sendMessage, clearChat };
+  return { messages, isStreaming, isLoadingHistory, sendMessage, clearChat };
 }

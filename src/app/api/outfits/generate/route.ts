@@ -124,14 +124,14 @@ export async function GET(request: NextRequest) {
   } : undefined;
 
   // Step 6: Generate outfits via Gemini (with 3-tier fallback)
-  // Preferences + wardrobe context are now passed to AI
+  // Returns discriminated result — either AI format (needs enrichment) or editor's picks (ready to go)
   const genreRuleset = {
     ...genre,
     isActive: genre.isActive ?? undefined,
     moodImageUrl: genre.moodImageUrl ?? undefined,
   };
 
-  const aiResult = await generateOutfitsWithFallback(
+  const fallbackResult = await generateOutfitsWithFallback(
     {
       genre: genreRuleset,
       candidateItems: allCandidates,
@@ -142,12 +142,17 @@ export async function GET(request: NextRequest) {
     cacheKey
   );
 
+  // Tier 3 short-circuit — editor's picks come pre-built with full item data
+  if (fallbackResult.source === "editors-pick") {
+    return NextResponse.json({ outfits: fallbackResult.outfits, source: "editors-pick" });
+  }
+
   // Step 7: Build response — attach full item data to AI-selected IDs
   // Create lookup maps for both wardrobe and catalog items
   const wardrobeMap = new Map(userWardrobe.map((w) => [w.id, w]));
   const catalogMap = new Map(catalogResults.map((c) => [c.id, c]));
 
-  const responseOutfits: Outfit[] = aiResult.outfits.map((aiOutfit) => {
+  const responseOutfits: Outfit[] = fallbackResult.aiResponse.outfits.map((aiOutfit) => {
     const items: OutfitItem[] = aiOutfit.items
       .map((aiItem) => {
         // Check wardrobe first, then catalog
@@ -197,12 +202,12 @@ export async function GET(request: NextRequest) {
       items,
       styleExplanation: aiOutfit.styleExplanation,
       totalPrice,
-      source: "ai" as const,
+      source: fallbackResult.source as Outfit["source"],
     };
   });
 
   // Cache the result for 1 hour
   await cacheSet(cacheKey, responseOutfits, 3600);
 
-  return NextResponse.json({ outfits: responseOutfits, source: "ai" });
+  return NextResponse.json({ outfits: responseOutfits, source: fallbackResult.source });
 }

@@ -126,17 +126,22 @@ export async function POST(request: NextRequest) {
         `pregen:${profile.userId}:${genreSlug}:${today}`
       );
 
+      // Extract outfits from discriminated result
+      const outfits = result.source === "editors-pick"
+        ? result.outfits
+        : result.aiResponse.outfits;
+
       // Save to DB
       await db.insert(preGeneratedOutfits).values({
         id: nanoid(),
         userId: profile.userId,
         genreId: genre.id,
         weatherDate: today,
-        outfitsJson: result.outfits,
+        outfitsJson: outfits,
       });
 
       usersProcessed++;
-      outfitsGenerated += result.outfits.length;
+      outfitsGenerated += outfits.length;
 
       // Small delay between users to respect Gemini rate limits
       await new Promise((r) => setTimeout(r, 1000));
