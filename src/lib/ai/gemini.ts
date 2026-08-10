@@ -25,8 +25,8 @@ function getFlashChat() {
 }
 
 export const geminiProvider: AiProvider = {
-  async generateOutfits({ genre, candidateItems, occasion, weather, userPreferences }) {
-    const prompt = buildOutfitPrompt(genre, candidateItems, occasion, weather, userPreferences);
+  async generateOutfits({ genre, candidateItems, occasion, weather, userPreferences, bodyProfile, colorProfile }) {
+    const prompt = buildOutfitPrompt(genre, candidateItems, occasion, weather, userPreferences, { bodyProfile, colorProfile });
     const result = await getFlash().generateContent(prompt);
     const text = result.response.text();
     const parsed = JSON.parse(text);

@@ -1,5 +1,7 @@
 import type { AiOutfitResponse, AiClothingAnalysis, AiOutfitRating, AiStyleQuizResult } from "@/types/ai";
 import type { GenreRuleset } from "@/types/genre";
+import type { BodyProfile } from "@/lib/styling/body-rules";
+import type { ColorProfile } from "@/lib/styling/color-theory";
 
 // Abstract interface — swap Gemini for Claude by implementing this
 export interface AiProvider {
@@ -10,6 +12,9 @@ export interface AiProvider {
     occasion: string;
     weather?: string;
     userPreferences?: UserPreferences;
+    // Body + color profiles for personalized fit/color recommendations
+    bodyProfile?: BodyProfile;
+    colorProfile?: ColorProfile;
   }): Promise<AiOutfitResponse>;
 
   // Analyze a clothing photo — is it clothing? what type/color/genre?

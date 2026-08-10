@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { genreRulesets, wardrobeItems, preGeneratedOutfits } from "@/lib/db/schema";
+import { genreRulesets, wardrobeItems, preGeneratedOutfits, styleProfiles } from "@/lib/db/schema";
 import { eq, and, like } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { cacheGet, cacheSet } from "@/lib/cache/redis";
@@ -17,6 +17,8 @@ import { getUserPreferences } from "@/lib/ai/preferences";
 import { getUserPlan } from "@/lib/stripe/plan";
 import type { CandidateItem } from "@/lib/ai/provider";
 import type { Outfit, OutfitItem } from "@/types/outfit";
+import type { BodyProfile } from "@/lib/styling/body-rules";
+import type { ColorProfile } from "@/lib/styling/color-theory";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -123,6 +125,15 @@ export async function GET(request: NextRequest) {
     priceSweetSpot: preferences.priceSweetSpot || undefined,
   } : undefined;
 
+  // Step 5b: Load body + color profiles for personalized fit/color recs
+  const profile = await db.query.styleProfiles.findFirst({
+    where: eq(styleProfiles.userId, session.user.id),
+  });
+  const bodyProfile = profile?.bodyType ? JSON.parse(profile.bodyType) as BodyProfile : undefined;
+  const colorProfile = profile?.colorPreferences
+    ? (profile.colorPreferences as unknown as ColorProfile)
+    : undefined;
+
   // Step 6: Generate outfits via Gemini (with 3-tier fallback)
   // Returns discriminated result — either AI format (needs enrichment) or editor's picks (ready to go)
   const genreRuleset = {
@@ -138,6 +149,8 @@ export async function GET(request: NextRequest) {
       occasion,
       weather,
       userPreferences: userPrefs,
+      bodyProfile,
+      colorProfile,
     },
     cacheKey
   );

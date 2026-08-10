@@ -1,14 +1,35 @@
 import type { GenreRuleset } from "@/types/genre";
 import type { CandidateItem, UserPreferences, QuizAnswer } from "./provider";
+import { buildBodyPromptSection, type BodyProfile } from "@/lib/styling/body-rules";
+import { buildColorPromptSection, type ColorProfile } from "@/lib/styling/color-theory";
+
+// Extended context for personalized outfit generation
+export interface StylingContext {
+  prefs?: UserPreferences;
+  bodyProfile?: BodyProfile;
+  colorProfile?: ColorProfile;
+}
 
 // Outfit composition prompt — tells Gemini exactly what to return
+// Now includes body-aware fit rules and seasonal color analysis when available
 export function buildOutfitPrompt(
   genre: GenreRuleset,
   candidates: CandidateItem[],
   occasion: string,
   weather?: string,
-  prefs?: UserPreferences
+  prefs?: UserPreferences,
+  stylingContext?: { bodyProfile?: BodyProfile; colorProfile?: ColorProfile },
 ): string {
+  // Body-aware section — only included when user has completed body profile
+  const bodySection = stylingContext?.bodyProfile
+    ? `\n${buildBodyPromptSection(stylingContext.bodyProfile)}\n`
+    : "";
+
+  // Color analysis section — only included when user has completed color profile
+  const colorSection = stylingContext?.colorProfile
+    ? `\n${buildColorPromptSection(stylingContext.colorProfile)}\n`
+    : "";
+
   return `You are a professional fashion stylist specializing in the "${genre.name}" aesthetic.
 
 GENRE RULES (follow these exactly):
@@ -17,7 +38,7 @@ GENRE RULES (follow these exactly):
 - Must include: ${JSON.stringify(genre.mustHave)}
 - Never include: ${JSON.stringify(genre.forbidden)}
 - Occasion (${occasion}): ${genre.occasionModifiers[occasion] || "use your judgment"}
-
+${bodySection}${colorSection}
 CONTEXT:
 - Weather: ${weather || "moderate"}
 - Budget preference: ${prefs?.priceSweetSpot ? `around $${prefs.priceSweetSpot}` : "any"}
@@ -27,7 +48,7 @@ ${prefs?.preferredBrands?.length ? `- Preferred brands: ${prefs.preferredBrands.
 AVAILABLE ITEMS (pick from these only — use exact IDs):
 ${candidates.filter((i) => i.isWardrobe).length > 0 ? `\n[USER'S OWN WARDROBE — prioritize these, the user already owns them]\n${candidates.filter((i) => i.isWardrobe).map((item) => `- ID: ${item.id} | ${item.name} | ${item.category} | ${item.color} | OWNED`).join("\n")}\n\n[CATALOG — shopping suggestions to complement wardrobe]\n` : ""}${candidates.filter((i) => !i.isWardrobe).map((item) => `- ID: ${item.id} | ${item.name} | ${item.brand} | $${item.price} | ${item.category} | ${item.color} | genres: ${item.genreTags.join(",")}`).join("\n")}
 
-Create 3-5 complete outfits. Each outfit must have 4-6 items covering: top, bottom, shoes, and at least one of (accessory, outerwear, bag).
+Create 3-5 complete outfits. Each outfit must have 4-6 items covering: top, bottom, shoes, and at least one of (accessory, outerwear, bag).${stylingContext?.bodyProfile ? " Follow the body-aware styling rules above — pick silhouettes and fits that flatter this user's specific body shape." : ""}${stylingContext?.colorProfile ? " Prioritize colors from the user's flattering palette when they overlap with the genre palette." : ""}
 
 Return JSON matching this schema:
 {
@@ -36,7 +57,7 @@ Return JSON matching this schema:
       "items": [
         { "catalogItemId": "item_id_here", "position": "top|bottom|shoes|accessory|outerwear|bag" }
       ],
-      "styleExplanation": "Brief explanation of why this outfit works for ${genre.name} ${occasion}"
+      "styleExplanation": "Brief explanation of why this outfit works for ${genre.name} ${occasion}${stylingContext?.bodyProfile ? " and flatters their body shape" : ""}"
     }
   ]
 }`;
