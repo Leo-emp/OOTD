@@ -131,10 +131,12 @@ export function useChat(genreSlug: string) {
     }
   }, [genreSlug]);
 
-  const clearChat = useCallback(() => {
+  const clearChat = useCallback(async () => {
     abortRef.current?.abort();
     setMessages([]);
     setIsStreaming(false);
+    // Delete server-side history so cleared chat stays cleared on refresh
+    try { await fetch("/api/chat", { method: "DELETE" }); } catch {}
   }, []);
 
   return { messages, isStreaming, isLoadingHistory, sendMessage, clearChat };

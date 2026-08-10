@@ -48,6 +48,14 @@ export default function WardrobePage() {
     fetchItems();
   }, [fetchItems]);
 
+  // Poll for processing items — check every 5s until all items are resolved
+  useEffect(() => {
+    const hasProcessing = items.some((i) => i.status === "processing");
+    if (!hasProcessing) return;
+    const interval = setInterval(fetchItems, 5000);
+    return () => clearInterval(interval);
+  }, [items, fetchItems]);
+
   // Fetch gap analysis when genre changes or items update
   useEffect(() => {
     if (items.length === 0) {

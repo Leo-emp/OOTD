@@ -160,3 +160,14 @@ export async function POST(request: NextRequest) {
     },
   });
 }
+
+// DELETE /api/chat — clear chat history for the current user
+export async function DELETE() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await db.delete(chatHistory).where(eq(chatHistory.userId, session.user.id));
+  return NextResponse.json({ cleared: true });
+}

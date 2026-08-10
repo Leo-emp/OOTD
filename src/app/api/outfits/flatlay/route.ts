@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { renderFlatLay, canRenderFlatLay } from "@/lib/images/flatlay";
+import { checkRateLimit, flatLayRateLimit } from "@/lib/cache/rate-limit";
+import { getUserPlan } from "@/lib/stripe/plan";
 import { z } from "zod";
 
 // Input validation — strict schema for the items array
@@ -25,6 +27,13 @@ export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit — flat-lay is CPU-heavy (Sharp compositing)
+  const plan = await getUserPlan(session.user.id);
+  const { success } = await checkRateLimit(flatLayRateLimit[plan], session.user.id);
+  if (!success) {
+    return NextResponse.json({ error: "Daily flat-lay limit reached. Upgrade to Pro for 30/day." }, { status: 429 });
   }
 
   // Parse and validate request body
