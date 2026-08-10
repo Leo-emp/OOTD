@@ -1,26 +1,168 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ─── Brand Design System ─────────────────────────────────────
+   OOTD AI — premium fashion platform design tokens
+   All tokens defined via Tailwind v4 @theme for type-safe usage
+   ──────────────────────────────────────────────────────────── */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* ── Fonts (CSS vars set by next/font in layout.tsx) ── */
+  --font-sans: var(--font-body), system-ui, sans-serif;
+
+  /* ── Brand Colors ── */
+  --color-brand-pink: #FF6B9D;
+  --color-brand-purple: #C084FC;
+  --color-brand-blue: #60A5FA;
+  --color-brand-dark: #0F0B15;
+  --color-brand-darker: #0A0710;
+  --color-brand-card: rgba(255, 255, 255, 0.08);
+  --color-brand-card-hover: rgba(255, 255, 255, 0.12);
+  --color-brand-border: rgba(255, 255, 255, 0.10);
+
+  /* ── Neutral Scale (50-950) ── */
+  --color-neutral-50: #FAFAFA;
+  --color-neutral-100: #F4F4F5;
+  --color-neutral-200: #E4E4E7;
+  --color-neutral-300: #D4D4D8;
+  --color-neutral-400: #A1A1AA;
+  --color-neutral-500: #71717A;
+  --color-neutral-600: #52525B;
+  --color-neutral-700: #3F3F46;
+  --color-neutral-800: #27272A;
+  --color-neutral-900: #18181B;
+  --color-neutral-950: #09090B;
+
+  /* ── Semantic Colors ── */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+
+  /* ── Genre Accent Colors ── */
+  --color-genre-old-money: #C9B99A;
+  --color-genre-streetwear: #FF4D4D;
+  --color-genre-y2k: #FF69B4;
+  --color-genre-minimalist: #94A3B8;
+  --color-genre-dark-academia: #8B7355;
+  --color-genre-coastal: #38BDF8;
+  --color-genre-cottagecore: #86EFAC;
+  --color-genre-grunge: #6B7280;
+  --color-genre-athleisure: #A78BFA;
+  --color-genre-bohemian: #F97316;
+  --color-genre-preppy: #2DD4BF;
+  --color-genre-edgy: #F43F5E;
+
+  /* ── Spacing Scale (4px base) ── */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-20: 80px;
+  --spacing-24: 96px;
+  --spacing-32: 128px;
+
+  /* ── Border Radius Scale ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+
+  /* ── Shadow Elevations ── */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-strong: 0 12px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 20px rgba(192, 132, 252, 0.3), 0 0 40px rgba(192, 132, 252, 0.1);
+
+  /* ── Motion Tokens ── */
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+  --duration-dramatic: 800ms;
+
+  /* ── Clothing Image Aspect Ratio ── */
+  --aspect-clothing: 3 / 4;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ─── Base Styles ────────────────────────────────────────────── */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-brand-dark);
+  color: var(--color-neutral-50);
+  font-family: var(--font-body);
+}
+
+/* ── Subtle grain texture on backgrounds ── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* ── Selection styling ── */
+::selection {
+  background: rgba(192, 132, 252, 0.3);
+  color: white;
+}
+
+/* ── Custom scrollbar — dark, thin, on-brand ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Smooth scrolling ── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Focus ring — custom styled, not browser default ── */
+*:focus-visible {
+  outline: 2px solid var(--color-brand-purple);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Glass morphism utility ── */
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Brand gradient text ── */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-brand-pink), var(--color-brand-purple), var(--color-brand-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Brand gradient background for CTAs ── */
+.gradient-bg {
+  background: linear-gradient(135deg, var(--color-brand-pink), var(--color-brand-purple), var(--color-brand-blue));
 }
