@@ -4,25 +4,30 @@ import type { GenreRuleset } from "@/types/genre";
 import { AiOutfitResponseSchema, AiClothingAnalysisSchema, AiOutfitRatingSchema, AiStyleQuizResultSchema } from "@/types/ai";
 import { buildOutfitPrompt, buildClothingAnalysisPrompt, buildRatingPrompt, buildQuizPrompt } from "./prompts";
 
-const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+// Lazy-initialized Gemini clients — avoids crash at build time
+let _genai: GoogleGenerativeAI | null = null;
+function getGenAI() {
+  if (!_genai) _genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  return _genai;
+}
 
-// Gemini 2.5 Flash — fast, cheap, good at structured output
-const flash = genai.getGenerativeModel({
-  model: "gemini-2.5-flash-preview-05-20",
-  generationConfig: {
-    responseMimeType: "application/json",
-  },
-});
+function getFlash() {
+  return getGenAI().getGenerativeModel({
+    model: "gemini-2.5-flash-preview-05-20",
+    generationConfig: { responseMimeType: "application/json" },
+  });
+}
 
-// Separate instance for chat streaming (no JSON mode)
-const flashChat = genai.getGenerativeModel({
-  model: "gemini-2.5-flash-preview-05-20",
-});
+function getFlashChat() {
+  return getGenAI().getGenerativeModel({
+    model: "gemini-2.5-flash-preview-05-20",
+  });
+}
 
 export const geminiProvider: AiProvider = {
   async generateOutfits({ genre, candidateItems, occasion, weather, userPreferences }) {
     const prompt = buildOutfitPrompt(genre, candidateItems, occasion, weather, userPreferences);
-    const result = await flash.generateContent(prompt);
+    const result = await getFlash().generateContent(prompt);
     const text = result.response.text();
     const parsed = JSON.parse(text);
     // Validate against schema — throws if Gemini returned bad data
@@ -31,7 +36,7 @@ export const geminiProvider: AiProvider = {
 
   async analyzeClothing(imageBase64: string) {
     const prompt = buildClothingAnalysisPrompt();
-    const result = await flash.generateContent([
+    const result = await getFlash().generateContent([
       prompt,
       { inlineData: { mimeType: "image/webp", data: imageBase64 } },
     ]);
@@ -41,7 +46,7 @@ export const geminiProvider: AiProvider = {
 
   async rateOutfit({ imageBase64, genre }) {
     const prompt = buildRatingPrompt(genre);
-    const result = await flash.generateContent([
+    const result = await getFlash().generateContent([
       prompt,
       { inlineData: { mimeType: "image/webp", data: imageBase64 } },
     ]);
@@ -51,7 +56,7 @@ export const geminiProvider: AiProvider = {
 
   async analyzeQuizResults(answers: QuizAnswer[]) {
     const prompt = buildQuizPrompt(answers);
-    const result = await flash.generateContent(prompt);
+    const result = await getFlash().generateContent(prompt);
     const parsed = JSON.parse(result.response.text());
     return AiStyleQuizResultSchema.parse(parsed);
   },
@@ -63,7 +68,7 @@ export const geminiProvider: AiProvider = {
       parts: [{ text: m.content }],
     }));
 
-    const chat = flashChat.startChat({
+    const chat = getFlashChat().startChat({
       systemInstruction: systemPrompt,
       history: contents.slice(0, -1), // all except the last message
     });

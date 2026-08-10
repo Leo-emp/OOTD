@@ -1,26 +1,31 @@
+// GET /api/outfits/generate?genre=old-money&occasion=casual&weather=warm
+// Full 7-step pipeline: cache → pre-gen → wardrobe+catalog → preferences → Gemini → rank → response
+// Mixes user's wardrobe items with catalog items for personalized outfits
+
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { genreRulesets, outfits, outfitItems, preGeneratedOutfits, catalogItems } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { genreRulesets, wardrobeItems, preGeneratedOutfits } from "@/lib/db/schema";
+import { eq, and, like } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { cacheGet, cacheSet } from "@/lib/cache/redis";
 import { checkRateLimit, outfitRateLimit } from "@/lib/cache/rate-limit";
 import { generateOutfitsWithFallback } from "@/lib/ai/fallback";
-import { searchCatalog } from "@/lib/catalog/search";
+import { smartSearch } from "@/lib/catalog/search";
+import { getUserPreferences } from "@/lib/ai/preferences";
+import { getUserPlan } from "@/lib/stripe/plan";
+import type { CandidateItem } from "@/lib/ai/provider";
 import type { Outfit, OutfitItem } from "@/types/outfit";
 
-// GET /api/outfits/generate?genre=old-money&occasion=casual&weather=warm
-// Full 6-step pipeline: cache → pre-gen → catalog → Gemini → rank → response
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Rate limit check
-  const plan = "free"; // TODO: check subscription
+  // Rate limit check — Pro users get higher limits
+  const plan = await getUserPlan(session.user.id);
   const { success } = await checkRateLimit(outfitRateLimit[plan], session.user.id);
   if (!success) {
     return NextResponse.json({ error: "Daily outfit limit reached. Upgrade to Pro for 50/day." }, { status: 429 });
@@ -41,8 +46,8 @@ export async function GET(request: NextRequest) {
   // Step 2: Check pre-generated outfits (from nightly cron)
   const today = new Date().toISOString().split("T")[0];
   const preGen = await db.query.preGeneratedOutfits.findFirst({
-    where: (pg, { and, eq }) =>
-      and(eq(pg.userId, session.user.id), eq(pg.weatherDate, today)),
+    where: (pg, { and: a, eq: e }) =>
+      a(e(pg.userId, session.user.id), e(pg.weatherDate, today)),
   });
   if (preGen) {
     const preGenOutfits = preGen.outfitsJson as Outfit[];
@@ -58,20 +63,42 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Genre not found" }, { status: 404 });
   }
 
-  // Step 4: Search catalog for candidate items
-  const candidates = await searchCatalog({
+  // Step 4a: Get user's wardrobe items that match this genre
+  // These are clothes the user actually owns — highest priority for outfit building
+  const userWardrobe = await db.query.wardrobeItems.findMany({
+    where: and(
+      eq(wardrobeItems.userId, session.user.id),
+      eq(wardrobeItems.status, "ready"),
+    ),
+  });
+
+  // Filter wardrobe to genre-compatible items
+  const wardrobeCandidates: CandidateItem[] = userWardrobe
+    .filter((w) => {
+      const tags = (w.genreTags as string[]) || [];
+      return tags.includes(genreSlug) || tags.length === 0; // include untagged items
+    })
+    .map((w) => ({
+      id: w.id,
+      name: `My ${w.category || "item"}`,
+      brand: "My Wardrobe",
+      price: 0,
+      category: w.category || "top",
+      color: w.color || "unknown",
+      genreTags: (w.genreTags as string[]) || [],
+      isWardrobe: true,
+      imageUrl: w.imageThumbUrl || w.imageUrl,
+    }));
+
+  // Step 4b: Search catalog for items to complement wardrobe
+  const catalogResults = await smartSearch({
     genreSlug,
     minPrice: genre.priceRange.min,
     maxPrice: genre.priceRange.max,
-    limit: 100,
+    limit: 80,
   });
 
-  if (candidates.length < 4) {
-    return NextResponse.json({ error: "Not enough items in catalog for this genre" }, { status: 404 });
-  }
-
-  // Step 5: Generate outfits via Gemini (with 3-tier fallback)
-  const candidateItems = candidates.map((c) => ({
+  const catalogCandidates: CandidateItem[] = catalogResults.map((c) => ({
     id: c.id,
     name: c.name,
     brand: c.brand,
@@ -81,35 +108,86 @@ export async function GET(request: NextRequest) {
     genreTags: (c.genreTags as string[]) || [],
   }));
 
-  // Convert DB null values to undefined for type compat
-  const genreRuleset = { ...genre, isActive: genre.isActive ?? undefined, moodImageUrl: genre.moodImageUrl ?? undefined };
+  // Merge: wardrobe items first (AI sees them as priority), then catalog
+  const allCandidates = [...wardrobeCandidates, ...catalogCandidates];
+
+  if (allCandidates.length < 4) {
+    return NextResponse.json({ error: "Not enough items for this genre. Try uploading wardrobe items or switching genres." }, { status: 404 });
+  }
+
+  // Step 5: Get learned preferences to personalize AI output
+  const preferences = await getUserPreferences(session.user.id);
+  const userPrefs = preferences ? {
+    preferredColors: (preferences.preferredColors as string[]) || undefined,
+    preferredBrands: (preferences.preferredBrands as string[]) || undefined,
+    priceSweetSpot: preferences.priceSweetSpot || undefined,
+  } : undefined;
+
+  // Step 6: Generate outfits via Gemini (with 3-tier fallback)
+  // Preferences + wardrobe context are now passed to AI
+  const genreRuleset = {
+    ...genre,
+    isActive: genre.isActive ?? undefined,
+    moodImageUrl: genre.moodImageUrl ?? undefined,
+  };
 
   const aiResult = await generateOutfitsWithFallback(
-    { genre: genreRuleset, candidateItems, occasion, weather },
+    {
+      genre: genreRuleset,
+      candidateItems: allCandidates,
+      occasion,
+      weather,
+      userPreferences: userPrefs,
+    },
     cacheKey
   );
 
-  // Step 6: Build response — attach full item data to AI-selected IDs
+  // Step 7: Build response — attach full item data to AI-selected IDs
+  // Create lookup maps for both wardrobe and catalog items
+  const wardrobeMap = new Map(userWardrobe.map((w) => [w.id, w]));
+  const catalogMap = new Map(catalogResults.map((c) => [c.id, c]));
+
   const responseOutfits: Outfit[] = aiResult.outfits.map((aiOutfit) => {
     const items: OutfitItem[] = aiOutfit.items
       .map((aiItem) => {
-        const catalogItem = candidates.find((c) => c.id === aiItem.catalogItemId);
-        if (!catalogItem) return null;
-        return {
-          itemId: catalogItem.id,
-          itemType: "catalog" as const,
-          position: aiItem.position,
-          name: catalogItem.name,
-          brand: catalogItem.brand,
-          price: catalogItem.price,
-          imageUrl: (catalogItem.imageUrls as string[])?.[0] || "",
-          affiliateUrl: catalogItem.affiliateUrl,
-          color: catalogItem.color,
-        };
+        // Check wardrobe first, then catalog
+        const wardrobeItem = wardrobeMap.get(aiItem.catalogItemId);
+        if (wardrobeItem) {
+          return {
+            itemId: wardrobeItem.id,
+            itemType: "wardrobe" as const,
+            position: aiItem.position,
+            name: `My ${wardrobeItem.category || "item"}`,
+            brand: "My Wardrobe",
+            price: 0,
+            imageUrl: wardrobeItem.imageThumbUrl || wardrobeItem.imageUrl,
+            affiliateUrl: "",
+            color: wardrobeItem.color || "",
+          };
+        }
+
+        const catalogItem = catalogMap.get(aiItem.catalogItemId);
+        if (catalogItem) {
+          return {
+            itemId: catalogItem.id,
+            itemType: "catalog" as const,
+            position: aiItem.position,
+            name: catalogItem.name,
+            brand: catalogItem.brand,
+            price: catalogItem.price,
+            imageUrl: (catalogItem.imageUrls as string[])?.[0] || "",
+            affiliateUrl: catalogItem.affiliateUrl,
+            color: catalogItem.color,
+          };
+        }
+
+        return null;
       })
       .filter(Boolean) as OutfitItem[];
 
-    const totalPrice = items.reduce((sum, item) => sum + (item.price || 0), 0);
+    const totalPrice = items
+      .filter((i) => i.itemType === "catalog")
+      .reduce((sum, item) => sum + (item.price || 0), 0);
 
     return {
       id: nanoid(),

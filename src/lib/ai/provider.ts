@@ -41,6 +41,9 @@ export interface CandidateItem {
   category: string;
   color: string;
   genreTags: string[];
+  // Optional wardrobe fields — set when the item is from the user's closet
+  isWardrobe?: boolean;
+  imageUrl?: string;
 }
 
 export interface UserPreferences {

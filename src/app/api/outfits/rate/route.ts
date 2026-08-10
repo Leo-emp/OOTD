@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { outfitRatings } from "@/lib/db/schema";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { updateUserPreferences } from "@/lib/ai/preferences";
 
 // Validate incoming rating request
 const RateSchema = z.object({
@@ -34,6 +35,11 @@ export async function POST(request: NextRequest) {
     outfitId,
     rating,
   });
+
+  // Background preference update — doesn't block response
+  updateUserPreferences(session.user.id).catch((e) =>
+    console.error("[Rate] Preference update failed:", e)
+  );
 
   return NextResponse.json({ success: true });
 }

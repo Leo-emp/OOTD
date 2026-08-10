@@ -1,3 +1,6 @@
+// Auth guard — redirects unauthenticated users to login, authenticated users away from auth pages
+// Next.js 16: proxy.ts replaces deprecated middleware.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
@@ -6,7 +9,7 @@ const PROTECTED_ROUTES = ["/dashboard", "/stylist", "/wardrobe", "/discover", "/
 // Routes that authenticated users shouldn't see
 const AUTH_ROUTES = ["/login", "/signup"];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const session = getSessionCookie(request);
   const { pathname } = request.nextUrl;
 

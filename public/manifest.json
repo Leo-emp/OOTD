@@ -1,0 +1,39 @@
+{
+  "name": "OOTD AI — Your AI-Powered Style Bestie",
+  "short_name": "OOTD AI",
+  "description": "AI-powered outfit recommendations across 12 fashion genres. Upload your wardrobe, get styled daily.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0F0B15",
+  "theme_color": "#7C3AED",
+  "orientation": "portrait",
+  "categories": ["lifestyle", "shopping", "personalization"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

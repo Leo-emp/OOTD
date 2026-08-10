@@ -4,10 +4,10 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import type { Outfit } from "@/types/outfit";
 import { ShopButton } from "./ShopButton";
+import { FlatLayView } from "./FlatLayView";
 import { Heart, ArrowRight, X } from "lucide-react";
 
-// Premium outfit card — editorial layout with high-res studio product images
-// Primary view: individual item cards (not flat-lay composite)
+// Premium outfit card — editorial layout with flat-lay composite + items grid toggle
 export function OutfitCard({
   outfit,
   onRate,
@@ -51,23 +51,33 @@ export function OutfitCard({
         </div>
       </div>
 
-      {/* Hero items — larger cards (top/outerwear) */}
-      {heroItems.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          {heroItems.map((item, i) => (
-            <ItemCard key={item.itemId} item={item} delay={i * 0.05} size="large" />
-          ))}
-        </div>
-      )}
+      {/* Items display — flat-lay composite / grid toggle */}
+      <FlatLayView
+        items={outfit.items}
+        genreSlug={outfit.genreSlug}
+        defaultView="grid"
+        renderGrid={() => (
+          <>
+            {/* Hero items — larger cards (top/outerwear) */}
+            {heroItems.length > 0 && (
+              <div className="grid grid-cols-2 gap-3">
+                {heroItems.map((item, i) => (
+                  <ItemCard key={item.itemId} item={item} delay={i * 0.05} size="large" />
+                ))}
+              </div>
+            )}
 
-      {/* Other items — smaller cards (bottom, shoes, accessories) */}
-      {otherItems.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          {otherItems.map((item, i) => (
-            <ItemCard key={item.itemId} item={item} delay={(heroItems.length + i) * 0.05} size="small" />
-          ))}
-        </div>
-      )}
+            {/* Other items — smaller cards (bottom, shoes, accessories) */}
+            {otherItems.length > 0 && (
+              <div className="grid grid-cols-3 gap-3 mt-3">
+                {otherItems.map((item, i) => (
+                  <ItemCard key={item.itemId} item={item} delay={(heroItems.length + i) * 0.05} size="small" />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      />
 
       {/* Style explanation */}
       <p className="text-sm text-neutral-400 leading-relaxed">

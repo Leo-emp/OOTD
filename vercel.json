@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/pre-generate",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/catalog/sync",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

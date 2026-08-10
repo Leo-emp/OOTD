@@ -2,14 +2,17 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Camera } from "lucide-react";
+import { Send, Camera, X } from "lucide-react";
 import { useChat } from "@/hooks/useChat";
 
 // Personal stylist chat interface — streaming responses, genre-aware
 export function ChatUI({ genreSlug }: { genreSlug: string }) {
   const { messages, isStreaming, sendMessage } = useChat(genreSlug);
   const [input, setInput] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -18,9 +21,36 @@ export function ChatUI({ genreSlug }: { genreSlug: string }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!input.trim() || isStreaming) return;
-    sendMessage(input.trim());
+    if ((!input.trim() && !imageBase64) || isStreaming) return;
+
+    const msg = imageBase64
+      ? (input.trim() || "Rate my outfit and give me style tips")
+      : input.trim();
+
+    sendMessage(msg, imageBase64 || undefined);
     setInput("");
+    setImagePreview(null);
+    setImageBase64(null);
+  }
+
+  // Handle photo upload for outfit rating
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+      // Extract base64 data (remove data:image/xxx;base64, prefix)
+      const base64 = result.split(",")[1];
+      setImageBase64(base64);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input so same file can be selected again
+    e.target.value = "";
   }
 
   return (
@@ -83,15 +113,54 @@ export function ChatUI({ genreSlug }: { genreSlug: string }) {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Image preview — shows above input when a photo is attached */}
+      <AnimatePresence>
+        {imagePreview && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="px-4 overflow-hidden"
+          >
+            <div className="relative inline-block mb-2">
+              <img
+                src={imagePreview}
+                alt="Outfit to rate"
+                className="h-24 w-auto rounded-xl object-cover"
+              />
+              <button
+                onClick={() => { setImagePreview(null); setImageBase64(null); }}
+                className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white cursor-pointer"
+              >
+                <X size={10} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Input area */}
       <form
         onSubmit={handleSubmit}
         className="flex items-center gap-3 p-4 border-t border-white/5"
       >
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleImageSelect}
+          className="hidden"
+        />
         <button
           type="button"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 text-neutral-400 transition hover:text-white hover:border-white/20 cursor-pointer"
-          aria-label="Upload photo"
+          onClick={() => fileInputRef.current?.click()}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition cursor-pointer ${
+            imageBase64
+              ? "border-brand-purple/50 bg-brand-purple/10 text-brand-purple"
+              : "border-white/10 text-neutral-400 hover:text-white hover:border-white/20"
+          }`}
+          aria-label="Upload photo for rating"
         >
           <Camera size={18} />
         </button>
@@ -99,13 +168,13 @@ export function ChatUI({ genreSlug }: { genreSlug: string }) {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask your stylist..."
+          placeholder={imageBase64 ? "Add a message (optional)..." : "Ask your stylist..."}
           className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-brand-purple focus:outline-none"
           disabled={isStreaming}
         />
         <button
           type="submit"
-          disabled={!input.trim() || isStreaming}
+          disabled={(!input.trim() && !imageBase64) || isStreaming}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full gradient-bg text-white transition hover:opacity-90 disabled:opacity-30 cursor-pointer"
           aria-label="Send message"
         >

@@ -25,7 +25,7 @@ ${prefs?.preferredColors?.length ? `- Preferred colors: ${prefs.preferredColors.
 ${prefs?.preferredBrands?.length ? `- Preferred brands: ${prefs.preferredBrands.join(", ")}` : ""}
 
 AVAILABLE ITEMS (pick from these only — use exact IDs):
-${candidates.map((item) => `- ID: ${item.id} | ${item.name} | ${item.brand} | $${item.price} | ${item.category} | ${item.color} | genres: ${item.genreTags.join(",")}`).join("\n")}
+${candidates.filter((i) => i.isWardrobe).length > 0 ? `\n[USER'S OWN WARDROBE — prioritize these, the user already owns them]\n${candidates.filter((i) => i.isWardrobe).map((item) => `- ID: ${item.id} | ${item.name} | ${item.category} | ${item.color} | OWNED`).join("\n")}\n\n[CATALOG — shopping suggestions to complement wardrobe]\n` : ""}${candidates.filter((i) => !i.isWardrobe).map((item) => `- ID: ${item.id} | ${item.name} | ${item.brand} | $${item.price} | ${item.category} | ${item.color} | genres: ${item.genreTags.join(",")}`).join("\n")}
 
 Create 3-5 complete outfits. Each outfit must have 4-6 items covering: top, bottom, shoes, and at least one of (accessory, outerwear, bag).
 

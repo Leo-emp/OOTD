@@ -10,6 +10,7 @@ import { prepareUpload, generateThumbnail, removeBackground } from "@/lib/image/
 import { uploadToBlob } from "@/lib/image/upload";
 import { geminiProvider } from "@/lib/ai/fallback";
 import { checkRateLimit, uploadRateLimit } from "@/lib/cache/rate-limit";
+import { getUserPlan } from "@/lib/stripe/plan";
 
 export async function POST(request: NextRequest) {
   // Auth check
@@ -18,8 +19,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Rate limit check
-  const plan = "free"; // TODO: check actual subscription in Task 17
+  // Rate limit check — Pro users get higher upload limits
+  const plan = await getUserPlan(session.user.id);
   const { success, remaining } = await checkRateLimit(
     uploadRateLimit[plan],
     session.user.id

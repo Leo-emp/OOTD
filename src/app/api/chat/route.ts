@@ -2,12 +2,13 @@ import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { genreRulesets, chatHistory } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { genreRulesets, chatHistory, wardrobeItems, styleProfiles } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { geminiProvider } from "@/lib/ai/fallback";
 import { buildStylistSystemPrompt } from "@/lib/ai/prompts";
 import { checkRateLimit, chatRateLimit } from "@/lib/cache/rate-limit";
+import { getUserPlan } from "@/lib/stripe/plan";
 
 // POST /api/chat — streaming SSE endpoint for stylist chat
 export async function POST(request: NextRequest) {
@@ -16,8 +17,8 @@ export async function POST(request: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  // Rate limit check
-  const plan = "free"; // TODO: check subscription
+  // Rate limit check — Pro users get higher limits
+  const plan = await getUserPlan(session.user.id);
   const { success } = await checkRateLimit(chatRateLimit[plan], session.user.id);
   if (!success) {
     return new Response(JSON.stringify({ error: "Daily chat limit reached. Upgrade to Pro for 200/day." }), {
@@ -67,10 +68,29 @@ export async function POST(request: NextRequest) {
     imageUrl: imageBase64 ? "image_attached" : null,
   });
 
-  // Build system prompt with genre personality
-  // Convert DB null values to undefined for type compat
+  // Fetch the user's wardrobe so the stylist knows what they own
+  const wardrobe = await db.query.wardrobeItems.findMany({
+    where: and(
+      eq(wardrobeItems.userId, session.user.id),
+      eq(wardrobeItems.status, "ready"),
+    ),
+  });
+  const wardrobeSummary = wardrobe.length > 0
+    ? `USER'S WARDROBE (${wardrobe.length} items they own):\n` +
+      wardrobe.map((w) => `- ${w.category || "item"}: ${w.color || "unknown"} ${w.pattern || ""} (genres: ${(w.genreTags as string[] || []).join(", ") || "untagged"})`).join("\n")
+    : undefined;
+
+  // Fetch style profile for extra personalization
+  const profile = await db.query.styleProfiles.findFirst({
+    where: eq(styleProfiles.userId, session.user.id),
+  });
+  const profileSummary = profile
+    ? `Primary genre: ${profile.primaryGenre}, Secondary: ${profile.secondaryGenre || "none"}, Budget: $${profile.budgetMin}-$${profile.budgetMax}, Lifestyle: ${profile.lifestyle || "not set"}`
+    : undefined;
+
+  // Build system prompt with genre personality + wardrobe + profile context
   const genreRuleset = { ...genre, isActive: genre.isActive ?? undefined, moodImageUrl: genre.moodImageUrl ?? undefined };
-  const systemPrompt = buildStylistSystemPrompt(genreRuleset);
+  const systemPrompt = buildStylistSystemPrompt(genreRuleset, profileSummary, wardrobeSummary);
 
   // Stream response via SSE
   const encoder = new TextEncoder();
