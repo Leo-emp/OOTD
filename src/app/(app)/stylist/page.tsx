@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChatUI } from "@/components/chat/ChatUI";
 import { GenreSelector } from "@/components/genre/GenreSelector";
+import { PageTransition } from "@/components/ui/PageTransition";
 
 const GENRES = [
   { slug: "old-money", name: "Old Money" },
@@ -23,6 +24,7 @@ export default function StylistPage() {
   const [activeGenre, setActiveGenre] = useState("old-money");
 
   return (
+    <PageTransition className="h-full">
     <main className="flex flex-col h-[calc(100vh-5rem)]">
       {/* Header */}
       <div className="px-4 pt-6 pb-4">
@@ -44,5 +46,6 @@ export default function StylistPage() {
         <ChatUI genreSlug={activeGenre} />
       </div>
     </main>
+    </PageTransition>
   );
 }

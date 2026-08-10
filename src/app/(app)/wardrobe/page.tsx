@@ -4,8 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Plus, Trash2 } from "lucide-react";
-import { Skeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
+import { useToast } from "@/components/ui/Toast";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { WardrobeGridSkeleton } from "@/components/ui/ContentSkeleton";
+import { PageTransition } from "@/components/ui/PageTransition";
 
 interface WardrobeItem {
   id: string;
@@ -25,20 +28,34 @@ interface GapData {
 }
 
 export default function WardrobePage() {
+  const { toast } = useToast();
   const [items, setItems] = useState<WardrobeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [gapData, setGapData] = useState<GapData | null>(null);
   const [activeGenre, setActiveGenre] = useState("old-money");
 
-  // Fetch wardrobe items
+  // Fetch wardrobe items — uses sessionStorage for SWR (stale-while-revalidate)
   const fetchItems = useCallback(async () => {
+    // Show cached items instantly while fresh data loads
+    try {
+      const cached = sessionStorage.getItem("ootd-wardrobe");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setItems(parsed);
+        setLoading(false);
+      }
+    } catch {}
+
     try {
       const res = await fetch("/api/wardrobe");
       const data = await res.json();
-      setItems(data.items || []);
+      const freshItems = data.items || [];
+      setItems(freshItems);
+      try { sessionStorage.setItem("ootd-wardrobe", JSON.stringify(freshItems)); } catch {}
     } catch {
-      // Silent fail — items stay empty
+      // Silent fail — cached items stay visible
     } finally {
       setLoading(false);
     }
@@ -68,42 +85,56 @@ export default function WardrobePage() {
       .catch(() => {});
   }, [activeGenre, items.length]);
 
-  // Handle file upload
+  // Handle file upload — supports multiple files (bulk upload from camera roll)
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
+    const fileList = Array.from(files);
     setUploading(true);
-    const formData = new FormData();
-    formData.append("image", file);
+    setUploadProgress({ current: 0, total: fileList.length });
 
-    try {
-      const res = await fetch("/api/wardrobe/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
+    // Upload files sequentially to avoid overwhelming the server
+    for (let i = 0; i < fileList.length; i++) {
+      setUploadProgress({ current: i + 1, total: fileList.length });
 
-      if (res.ok) {
-        setItems((prev) => [
-          { id: data.id, imageUrl: data.imageUrl, imageThumbUrl: null, category: null, color: null, status: "processing" },
-          ...prev,
-        ]);
+      const formData = new FormData();
+      formData.append("image", fileList[i]);
+
+      try {
+        const res = await fetch("/api/wardrobe/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          setItems((prev) => [
+            { id: data.id, imageUrl: data.imageUrl, imageThumbUrl: null, category: null, color: null, status: "processing" },
+            ...prev,
+          ]);
+        }
+      } catch {
+        // Individual upload failed — continue with the rest
       }
-    } catch {
-      // Upload failed silently
-    } finally {
-      setUploading(false);
     }
+
+    setUploading(false);
+    setUploadProgress({ current: 0, total: 0 });
+    toast(`${fileList.length} item${fileList.length > 1 ? "s" : ""} uploaded`, "success");
+    // Reset the input so same files can be selected again
+    e.target.value = "";
   }
 
   // Handle delete
   async function handleDelete(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
+    toast("Item removed", "info");
     await fetch(`/api/wardrobe/${id}`, { method: "DELETE" });
   }
 
   return (
+    <PageTransition>
     <main className="px-4 pt-6 pb-24">
       {/* Header + upload button */}
       <div className="flex items-center justify-between mb-6">
@@ -117,10 +148,13 @@ export default function WardrobePage() {
         </div>
         <label className="flex h-10 items-center gap-2 rounded-xl gradient-bg px-4 text-sm font-medium text-white transition hover:opacity-90 cursor-pointer">
           <Plus size={16} />
-          {uploading ? "Uploading..." : "Add Item"}
+          {uploading
+            ? `${uploadProgress.current}/${uploadProgress.total}`
+            : "Add Items"}
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
+            multiple
             onChange={handleUpload}
             className="hidden"
             disabled={uploading}
@@ -194,14 +228,8 @@ export default function WardrobePage() {
         </motion.div>
       )}
 
-      {/* Loading skeleton grid */}
-      {loading && (
-        <div className="grid grid-cols-3 gap-3">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-[3/4] rounded-xl" />
-          ))}
-        </div>
-      )}
+      {/* Loading skeleton grid — content-aware shapes */}
+      {loading && <WardrobeGridSkeleton />}
 
       {/* Wardrobe grid */}
       {!loading && items.length > 0 && (
@@ -255,17 +283,15 @@ export default function WardrobePage() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state — branded wardrobe illustration */}
       {!loading && items.length === 0 && (
-        <div className="glass rounded-2xl p-12 text-center">
-          <p className="text-neutral-300 font-medium mb-2">
-            Your wardrobe is empty
-          </p>
-          <p className="text-sm text-neutral-500">
-            Upload photos of your clothes and our AI will categorize them for outfit recommendations
-          </p>
-        </div>
+        <EmptyState
+          variant="wardrobe"
+          title="Your wardrobe is empty"
+          description="Upload photos of your clothes and our AI will categorize them for outfit recommendations"
+        />
       )}
     </main>
+    </PageTransition>
   );
 }

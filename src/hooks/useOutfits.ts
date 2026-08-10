@@ -57,6 +57,12 @@ export function useOutfits() {
     }).catch(console.error);
   }, [outfits, currentIndex]);
 
+  // Prefetch adjacent genres — warms the cache so switching feels instant
+  const prefetch = useCallback((genre: string, occasion?: string) => {
+    const params = new URLSearchParams({ genre, ...(occasion && { occasion }) });
+    fetch(`/api/outfits/generate?${params}`, { priority: "low" as RequestPriority }).catch(() => {});
+  }, []);
+
   const currentOutfit = outfits[currentIndex] || null;
   const hasMore = currentIndex < outfits.length;
 
@@ -69,5 +75,6 @@ export function useOutfits() {
     error,
     fetchOutfits,
     rateOutfit,
+    prefetch,
   };
 }

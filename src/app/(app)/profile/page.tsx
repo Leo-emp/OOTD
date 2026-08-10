@@ -4,7 +4,10 @@ import { useState, useEffect, Suspense } from "react";
 import { useSession, signOut } from "@/lib/auth/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import { Heart, Palette, Shirt, Settings, Camera, Calendar } from "lucide-react";
 import { StyleDnaCard } from "@/components/profile/StyleDnaCard";
+import { PageTransition } from "@/components/ui/PageTransition";
 
 // Wrapper to provide Suspense boundary for useSearchParams
 export default function ProfilePage() {
@@ -28,8 +31,15 @@ function ProfileContent() {
     secondaryGenre?: string | null;
     accentGenre?: string | null;
   } | null>(null);
+  // Body/color profile data
+  const [stylingProfile, setStylingProfile] = useState<{
+    body: { shape: string; height: string; fitPreference: string } | null;
+    seasonalAnalysis: { label: string; bestColors: string[]; bestMetals: string[] } | null;
+  } | null>(null);
+  // Dynamic stats
+  const [stats, setStats] = useState({ savedCount: 0, wardrobeCount: 0 });
 
-  // Fetch real plan + style profile on mount
+  // Fetch real plan + style profile + styling profile + stats on mount
   useEffect(() => {
     fetch("/api/user/plan")
       .then((r) => r.json())
@@ -38,6 +48,22 @@ function ProfileContent() {
     fetch("/api/user/style")
       .then((r) => r.json())
       .then((data) => setStyleProfile(data))
+      .catch(() => {});
+    fetch("/api/profile/styling")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.profile) setStylingProfile(data.profile);
+      })
+      .catch(() => {});
+    // Fetch saved outfit count
+    fetch("/api/outfits/saved")
+      .then((r) => r.json())
+      .then((data) => setStats((s) => ({ ...s, savedCount: data.outfits?.length || 0 })))
+      .catch(() => {});
+    // Fetch wardrobe count
+    fetch("/api/wardrobe")
+      .then((r) => r.json())
+      .then((data) => setStats((s) => ({ ...s, wardrobeCount: data.items?.length || 0 })))
       .catch(() => {});
   }, []);
 
@@ -75,6 +101,7 @@ function ProfileContent() {
   }
 
   return (
+    <PageTransition>
     <main className="px-4 pt-6 pb-24 max-w-lg mx-auto">
       <h1 className="font-heading text-2xl font-bold text-white mb-6">Profile</h1>
 
@@ -201,35 +228,120 @@ function ProfileContent() {
         </div>
       )}
 
-      {/* App info */}
+      {/* Color Season + Body Profile (only when user has completed style profile) */}
+      {stylingProfile?.seasonalAnalysis && (
+        <Link href="/style-profile" className="block glass rounded-2xl p-5 mb-6 transition hover:bg-white/[0.06]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-heading font-semibold text-white flex items-center gap-2">
+              <Palette size={16} className="text-brand-purple" />
+              Color Season
+            </h3>
+            <span className="text-xs text-brand-purple">Edit →</span>
+          </div>
+          <p className="text-sm text-neutral-300 mb-2">{stylingProfile.seasonalAnalysis.label}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {stylingProfile.seasonalAnalysis.bestColors.slice(0, 6).map((color) => (
+              <span key={color} className="px-2 py-0.5 rounded-full bg-white/5 text-[10px] text-neutral-400 capitalize">
+                {color.replace(/_/g, " ")}
+              </span>
+            ))}
+          </div>
+          {stylingProfile.body && (
+            <div className="flex gap-4 mt-3 pt-3 border-t border-white/5 text-xs text-neutral-400">
+              <span className="capitalize">{stylingProfile.body.shape.replace(/_/g, " ")}</span>
+              <span className="capitalize">{stylingProfile.body.height}</span>
+              <span className="capitalize">{stylingProfile.body.fitPreference} fit</span>
+            </div>
+          )}
+        </Link>
+      )}
+
+      {/* Style profile CTA (when user hasn't set up yet) */}
+      {!stylingProfile?.seasonalAnalysis && (
+        <Link href="/style-profile" className="block glass rounded-2xl p-5 mb-6 border border-brand-purple/20 transition hover:bg-white/[0.06]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-purple/10 flex items-center justify-center">
+              <Palette size={20} className="text-brand-purple" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white">Set Up Your Style Profile</p>
+              <p className="text-xs text-neutral-400">Body shape + color analysis for personalized outfits</p>
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* Quick links */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <Link href="/saved" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <Heart size={18} className="text-brand-pink" />
+          <div>
+            <p className="text-sm font-medium text-white">{stats.savedCount}</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Saved</p>
+          </div>
+        </Link>
+        <Link href="/wardrobe" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <Shirt size={18} className="text-brand-purple" />
+          <div>
+            <p className="text-sm font-medium text-white">{stats.wardrobeCount}</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Wardrobe</p>
+          </div>
+        </Link>
+        <Link href="/rate-my-outfit" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <Camera size={18} className="text-brand-blue" />
+          <div>
+            <p className="text-sm font-medium text-white">Rate</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">My Outfit</p>
+          </div>
+        </Link>
+        <Link href="/calendar" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <Calendar size={18} className="text-green-400" />
+          <div>
+            <p className="text-sm font-medium text-white">Calendar</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">History</p>
+          </div>
+        </Link>
+      </div>
+
+      {/* Style stats */}
       <div className="glass rounded-2xl p-6 mb-6">
-        <h3 className="font-heading font-semibold text-white mb-3">Your Style Stats</h3>
+        <h3 className="font-heading font-semibold text-white mb-3">OOTD AI</h3>
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-xl font-bold text-white">12</p>
             <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Genres</p>
           </div>
           <div>
-            <p className="text-xl font-bold text-white">661+</p>
-            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Products</p>
+            <p className="text-xl font-bold text-white">{stats.savedCount}</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Saved</p>
           </div>
           <div>
-            <p className="text-xl font-bold text-white">100+</p>
-            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Brands</p>
+            <p className="text-xl font-bold text-white">{stats.wardrobeCount}</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Items</p>
           </div>
         </div>
       </div>
 
-      {/* Sign out */}
-      <button
-        onClick={handleSignOut}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-neutral-400 transition hover:text-white hover:bg-white/10"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        Sign Out
-      </button>
+      {/* Settings + Sign out */}
+      <div className="space-y-3">
+        <Link
+          href="/settings"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-neutral-400 transition hover:text-white hover:bg-white/10"
+        >
+          <Settings size={16} />
+          Settings & Privacy
+        </Link>
+        <button
+          onClick={handleSignOut}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-neutral-400 transition hover:text-white hover:bg-white/10 cursor-pointer"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Sign Out
+        </button>
+      </div>
     </main>
+    </PageTransition>
   );
 }

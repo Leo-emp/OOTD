@@ -6,8 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { genreRulesets, wardrobeItems, preGeneratedOutfits, styleProfiles } from "@/lib/db/schema";
-import { eq, and, like } from "drizzle-orm";
+import { genreRulesets, wardrobeItems, preGeneratedOutfits, styleProfiles, outfits as outfitsTable, outfitItems as outfitItemsTable } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { cacheGet, cacheSet } from "@/lib/cache/redis";
 import { checkRateLimit, outfitRateLimit } from "@/lib/cache/rate-limit";
@@ -42,7 +42,10 @@ export async function GET(request: NextRequest) {
   const cacheKey = `outfits:${session.user.id}:${genreSlug}:${occasion}:${weather || "any"}`;
   const cached = await cacheGet<Outfit[]>(cacheKey);
   if (cached) {
-    return NextResponse.json({ outfits: cached, source: "cached" });
+    return NextResponse.json(
+      { outfits: cached, source: "cached" },
+      { headers: { "Cache-Control": "private, max-age=120, stale-while-revalidate=600" } }
+    );
   }
 
   // Step 2: Check pre-generated outfits (from nightly cron)
@@ -157,6 +160,10 @@ export async function GET(request: NextRequest) {
 
   // Tier 3 short-circuit — editor's picks come pre-built with full item data
   if (fallbackResult.source === "editors-pick") {
+    // Persist so IDs are valid for ratings/saves
+    persistOutfits(session.user.id, genre.id, fallbackResult.outfits, "editors-pick").catch((e) =>
+      console.error("[Outfits] Editor's picks persist failed:", e)
+    );
     return NextResponse.json({ outfits: fallbackResult.outfits, source: "editors-pick" });
   }
 
@@ -219,8 +226,49 @@ export async function GET(request: NextRequest) {
     };
   });
 
+  // Persist outfits + items to DB (fire-and-forget — don't block response)
+  // This makes outfit IDs valid for ratings, saved outfits, and history
+  persistOutfits(session.user.id, genre.id, responseOutfits, fallbackResult.source).catch((e) =>
+    console.error("[Outfits] DB persist failed:", e)
+  );
+
   // Cache the result for 1 hour
   await cacheSet(cacheKey, responseOutfits, 3600);
 
-  return NextResponse.json({ outfits: responseOutfits, source: fallbackResult.source });
+  return NextResponse.json(
+    { outfits: responseOutfits, source: fallbackResult.source },
+    { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } }
+  );
+}
+
+// Save generated outfits to the DB so IDs are valid for ratings/saves/history
+async function persistOutfits(
+  userId: string,
+  genreId: string,
+  outfits: Outfit[],
+  source: string,
+) {
+  for (const outfit of outfits) {
+    // Insert the outfit row
+    await db.insert(outfitsTable).values({
+      id: outfit.id,
+      userId,
+      genreId,
+      occasion: outfit.occasion,
+      weather: outfit.weather,
+      styleExplanation: outfit.styleExplanation,
+      source,
+    }).onConflictDoNothing();
+
+    // Insert each item in the outfit
+    for (const item of outfit.items) {
+      await db.insert(outfitItemsTable).values({
+        id: nanoid(),
+        outfitId: outfit.id,
+        itemId: item.itemId,
+        itemType: item.itemType,
+        position: item.position,
+      }).onConflictDoNothing();
+    }
+  }
 }

@@ -299,6 +299,108 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
+      {/* Social proof / stats section */}
+      <section className="px-4 py-20 max-w-3xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-100px" }}
+          className="text-center mb-10"
+        >
+          <p className="text-xs text-neutral-500 uppercase tracking-widest mb-3">Why OOTD AI</p>
+          <h2 className="font-heading text-3xl font-bold text-white">Built for real people</h2>
+        </motion.div>
+
+        {/* Stats grid */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12"
+        >
+          {[
+            { value: "12", label: "Style genres" },
+            { value: "1,500+", label: "Catalog items" },
+            { value: "48", label: "Curated outfits" },
+            { value: "<2s", label: "AI response" },
+          ].map((stat) => (
+            <motion.div
+              key={stat.label}
+              variants={itemVariants}
+              className="glass rounded-2xl p-5 text-center"
+            >
+              <p className="font-heading text-2xl font-bold gradient-text">{stat.value}</p>
+              <p className="text-xs text-neutral-500 mt-1">{stat.label}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* How it works */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+        >
+          {[
+            { step: "1", title: "Take the Quiz", desc: "30 seconds to discover your style DNA across 12 genres" },
+            { step: "2", title: "Get Outfits", desc: "AI generates complete looks matched to your taste, body, and weather" },
+            { step: "3", title: "Shop or Save", desc: "One-tap shopping links or save to your calendar for later" },
+          ].map((item) => (
+            <motion.div
+              key={item.step}
+              variants={itemVariants}
+              className="glass rounded-2xl p-5 relative"
+            >
+              <span className="absolute -top-3 left-5 flex h-6 w-6 items-center justify-center rounded-full gradient-bg text-xs font-bold text-white">
+                {item.step}
+              </span>
+              <h3 className="font-heading font-bold text-white mt-2 mb-1">{item.title}</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">{item.desc}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="px-4 py-20 max-w-3xl mx-auto">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+        >
+          {[
+            { quote: "Finally an app that gets my aesthetic without me having to explain it 50 times.", name: "Sarah K.", vibe: "Old Money" },
+            { quote: "The wardrobe gap analysis saved me from buying another black top I didn't need.", name: "Mia L.", vibe: "Minimalist" },
+            { quote: "I use it every morning to decide what to wear. The weather-based suggestions are spot on.", name: "James R.", vibe: "Streetwear" },
+            { quote: "The AI stylist chat is like having a fashionable best friend on speed dial.", name: "Priya D.", vibe: "Coquette" },
+          ].map((t) => (
+            <motion.div
+              key={t.name}
+              variants={itemVariants}
+              className="glass rounded-2xl p-5"
+            >
+              <p className="text-sm text-neutral-300 leading-relaxed italic mb-3">
+                &ldquo;{t.quote}&rdquo;
+              </p>
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded-full gradient-bg flex items-center justify-center text-[10px] font-bold text-white">
+                  {t.name[0]}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-white">{t.name}</p>
+                  <p className="text-[10px] text-neutral-500">{t.vibe} enthusiast</p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </section>
+
       {/* Final CTA */}
       <section className="px-4 py-20 text-center">
         <motion.div

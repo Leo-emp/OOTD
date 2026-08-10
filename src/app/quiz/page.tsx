@@ -208,18 +208,33 @@ export default function QuizPage() {
             </div>
           </div>
 
-          {/* Continue button */}
-          <motion.button
+          {/* Post-quiz actions — onboarding flow */}
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => router.push("/dashboard")}
-            className="w-full py-3.5 rounded-xl gradient-bg text-white font-semibold shadow-lg shadow-brand-400/20"
+            className="space-y-3"
           >
-            See Your Outfits
-          </motion.button>
+            {/* Primary CTA — personalize further */}
+            <button
+              onClick={() => router.push("/style-profile")}
+              className="w-full py-3.5 rounded-xl gradient-bg text-white font-semibold shadow-lg shadow-brand-400/20 cursor-pointer"
+            >
+              Set Up Body & Color Profile
+            </button>
+
+            {/* Secondary CTA — skip to outfits */}
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-sm font-medium text-neutral-300 transition hover:bg-white/10 cursor-pointer"
+            >
+              Skip — Show Me Outfits
+            </button>
+
+            <p className="text-xs text-neutral-500 text-center">
+              Body & color profiles make outfit recommendations more accurate
+            </p>
+          </motion.div>
         </motion.div>
       </main>
     );

@@ -215,6 +215,18 @@ export const subscriptions = sqliteTable("subscriptions", {
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
 });
 
+// ─── Pinterest Connections ───────────────────────────
+// OAuth tokens for Pinterest integration (Vibe Match, Shop the Pin)
+export const pinterestConnections = sqliteTable("pinterest_connections", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  accessToken: text("access_token").notNull(),
+  connectedAt: text("connected_at").default(sql`(datetime('now'))`),
+});
+
 // ─── Pre-Generated Outfits ──────────────────────────
 // Nightly cron batch results — 10 outfits per active user for instant morning display
 export const preGeneratedOutfits = sqliteTable("pre_generated_outfits", {

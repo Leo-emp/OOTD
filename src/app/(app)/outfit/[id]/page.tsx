@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useParams } from "next/navigation";
 import { ShopButton } from "@/components/outfit/ShopButton";
 import { FlatLayView } from "@/components/outfit/FlatLayView";
+import { Share2 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 // Outfit detail view — shows all items in a curated outfit
 // Accessed when user taps an outfit card from dashboard
@@ -48,23 +50,38 @@ const POSITION_LABELS: Record<string, string> = {
 
 export default function OutfitDetailPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const { id } = useParams<{ id: string }>();
   const [outfit, setOutfit] = useState<OutfitDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeItem, setActiveItem] = useState<string | null>(null);
 
-  // Load outfit from sessionStorage (passed from dashboard card)
-  useState(() => {
+  // Load outfit from sessionStorage first (instant), fall back to API fetch
+  useEffect(() => {
+    let found = false;
     try {
       const stored = sessionStorage.getItem(`outfit-${id}`);
       if (stored) {
         setOutfit(JSON.parse(stored));
+        found = true;
       }
-    } catch {
-      // sessionStorage not available during SSR
+    } catch {}
+
+    if (found) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
-  });
+
+    // Fallback: fetch from DB API (handles shared links, page refresh, empty sessionStorage)
+    fetch(`/api/outfits/${id}`)
+      .then((r) => {
+        if (!r.ok) throw new Error("Not found");
+        return r.json();
+      })
+      .then((data) => setOutfit(data.outfit))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [id]);
 
   if (loading) {
     return (
@@ -120,9 +137,25 @@ export default function OutfitDetailPage() {
           </svg>
           Back
         </button>
-        <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-neutral-300 capitalize">
-          {outfit.genreSlug.replace("-", " ")} · {outfit.occasion}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const text = `Check out this ${outfit.genreSlug.replace(/-/g, " ")} outfit on OOTD AI!\n\n${outfit.styleExplanation}`;
+              if (navigator.share) {
+                navigator.share({ title: "OOTD AI Outfit", text, url: window.location.href }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(text).then(() => toast("Copied to clipboard", "info")).catch(() => {});
+              }
+            }}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-neutral-400 hover:text-brand-purple transition cursor-pointer"
+            aria-label="Share outfit"
+          >
+            <Share2 size={14} />
+          </button>
+          <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-neutral-300 capitalize">
+            {outfit.genreSlug.replace("-", " ")} · {outfit.occasion}
+          </span>
+        </div>
       </motion.div>
 
       {/* Style explanation card */}

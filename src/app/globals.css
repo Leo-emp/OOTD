@@ -7,7 +7,7 @@
 
 @theme inline {
   /* ── Fonts (CSS vars set by next/font in layout.tsx) ── */
-  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-sans: var(--font-body), "DM Sans", system-ui, sans-serif;
 
   /* ── Brand Colors ── */
   --color-brand-pink: #FF6B9D;
@@ -165,4 +165,44 @@ html {
 /* ── Brand gradient background for CTAs ── */
 .gradient-bg {
   background: linear-gradient(135deg, var(--color-brand-pink), var(--color-brand-purple), var(--color-brand-blue));
+}
+
+/* ── Image placeholder shimmer — loading skeleton for images ── */
+.shimmer {
+  background: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.08) 60%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Lightbox zoom-in cursor for clickable images ── */
+.cursor-zoom-in {
+  cursor: zoom-in;
+}
+
+/* ── Premium glow pulse — used on CTAs and featured elements ── */
+.glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(192, 132, 252, 0.15); }
+  50% { box-shadow: 0 0 30px rgba(192, 132, 252, 0.3), 0 0 60px rgba(192, 132, 252, 0.1); }
+}
+
+/* ── Editorial serif heading styling for Playfair Display ── */
+.font-heading {
+  font-family: var(--font-heading), Georgia, serif;
+  letter-spacing: -0.02em;
 }
