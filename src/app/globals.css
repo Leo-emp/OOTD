@@ -201,6 +201,18 @@ html {
   50% { box-shadow: 0 0 30px rgba(192, 132, 252, 0.3), 0 0 60px rgba(192, 132, 252, 0.1); }
 }
 
+/* ── Shiny text sweep — light glare pans across text for premium badges ── */
+@keyframes shiny-text {
+  0%, 90%, 100% { background-position: calc(-100% - 200px) 0; }
+  30%, 60% { background-position: calc(100% + 200px) 0; }
+}
+
+/* ── Infinite marquee scroll — used once for the fashion keyword strip ── */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 /* ── Editorial serif heading styling for Playfair Display ── */
 .font-heading {
   font-family: var(--font-heading), Georgia, serif;

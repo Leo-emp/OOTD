@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "img.shopstyle-cdn.com" },
       // Placeholder images for demo seed
       { protocol: "https", hostname: "placehold.co" },
+      // Unsplash — landing page editorial fashion photography
+      { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
   serverExternalPackages: ["sharp"],
