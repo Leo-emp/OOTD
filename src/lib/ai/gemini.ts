@@ -5,6 +5,7 @@ import { AiOutfitResponseSchema, AiClothingAnalysisSchema, AiOutfitRatingSchema,
 import { buildOutfitPrompt, buildClothingAnalysisPrompt, buildRatingPrompt, buildQuizPrompt } from "./prompts";
 import { requireEnv } from "@/lib/env";
 import { GEMINI_MODEL } from "@/lib/constants";
+import { traceAiCall, recordMetric } from "@/lib/observability";
 
 // Safe JSON parse with descriptive error — Gemini sometimes returns malformed JSON
 function safeParseJson(text: string, context: string): unknown {
@@ -38,37 +39,45 @@ function getFlashChat() {
 
 export const geminiProvider: AiProvider = {
   async generateOutfits({ genre, candidateItems, occasion, weather, userPreferences, bodyProfile, colorProfile }) {
-    const prompt = buildOutfitPrompt(genre, candidateItems, occasion, weather, userPreferences, { bodyProfile, colorProfile });
-    const result = await getFlash().generateContent(prompt);
-    const parsed = safeParseJson(result.response.text(), "generateOutfits");
-    return AiOutfitResponseSchema.parse(parsed);
+    return traceAiCall("generateOutfits", undefined, async () => {
+      const prompt = buildOutfitPrompt(genre, candidateItems, occasion, weather, userPreferences, { bodyProfile, colorProfile });
+      const result = await getFlash().generateContent(prompt);
+      const parsed = safeParseJson(result.response.text(), "generateOutfits");
+      return AiOutfitResponseSchema.parse(parsed);
+    }, { genre: genre.slug, occasion, itemCount: candidateItems.length });
   },
 
   async analyzeClothing(imageBase64: string) {
-    const prompt = buildClothingAnalysisPrompt();
-    const result = await getFlash().generateContent([
-      prompt,
-      { inlineData: { mimeType: "image/webp", data: imageBase64 } },
-    ]);
-    const parsed = safeParseJson(result.response.text(), "analyzeClothing");
-    return AiClothingAnalysisSchema.parse(parsed);
+    return traceAiCall("analyzeClothing", undefined, async () => {
+      const prompt = buildClothingAnalysisPrompt();
+      const result = await getFlash().generateContent([
+        prompt,
+        { inlineData: { mimeType: "image/webp", data: imageBase64 } },
+      ]);
+      const parsed = safeParseJson(result.response.text(), "analyzeClothing");
+      return AiClothingAnalysisSchema.parse(parsed);
+    });
   },
 
   async rateOutfit({ imageBase64, genre }) {
-    const prompt = buildRatingPrompt(genre);
-    const result = await getFlash().generateContent([
-      prompt,
-      { inlineData: { mimeType: "image/webp", data: imageBase64 } },
-    ]);
-    const parsed = safeParseJson(result.response.text(), "rateOutfit");
-    return AiOutfitRatingSchema.parse(parsed);
+    return traceAiCall("rateOutfit", undefined, async () => {
+      const prompt = buildRatingPrompt(genre);
+      const result = await getFlash().generateContent([
+        prompt,
+        { inlineData: { mimeType: "image/webp", data: imageBase64 } },
+      ]);
+      const parsed = safeParseJson(result.response.text(), "rateOutfit");
+      return AiOutfitRatingSchema.parse(parsed);
+    }, { genre: genre.slug });
   },
 
   async analyzeQuizResults(answers: QuizAnswer[]) {
-    const prompt = buildQuizPrompt(answers);
-    const result = await getFlash().generateContent(prompt);
-    const parsed = safeParseJson(result.response.text(), "analyzeQuizResults");
-    return AiStyleQuizResultSchema.parse(parsed);
+    return traceAiCall("analyzeQuizResults", undefined, async () => {
+      const prompt = buildQuizPrompt(answers);
+      const result = await getFlash().generateContent(prompt);
+      const parsed = safeParseJson(result.response.text(), "analyzeQuizResults");
+      return AiStyleQuizResultSchema.parse(parsed);
+    }, { answerCount: answers.length });
   },
 
   async *chatStream({ messages, systemPrompt, imageBase64 }) {

@@ -3,6 +3,7 @@ import type { AiOutfitResponse } from "@/types/ai";
 import { geminiProvider } from "./gemini";
 import { cacheGet, cacheSet } from "@/lib/cache/redis";
 import { getEditorsPicks } from "./editors-picks";
+import { trackFallback } from "@/lib/observability";
 import type { Outfit } from "@/types/outfit";
 
 // 3-tier fallback: Gemini → Redis cache → curated editor's picks
@@ -34,6 +35,7 @@ export async function generateOutfitsWithFallback(
     const result = await withTimeout(geminiProvider.generateOutfits(params), TIMEOUT_MS);
     // Cache successful result for 1 hour
     await cacheSet(cacheKey, result, 3600);
+    trackFallback("ai", "generateOutfits");
     return { source: "ai", aiResponse: result };
   } catch (error) {
     console.error("[AI Fallback] Gemini failed, trying cache:", error);
@@ -42,15 +44,14 @@ export async function generateOutfitsWithFallback(
   // Tier 2: Try cached response
   const cached = await cacheGet<AiOutfitResponse>(cacheKey);
   if (cached) {
-    console.log("[AI Fallback] Serving from cache");
+    trackFallback("cached", "generateOutfits");
     return { source: "cached", aiResponse: cached };
   }
 
   // Tier 3: Curated editor's picks — always returns real outfits
-  // 48 handpicked outfits across 12 genres × 4 occasions, real brands/prices
   const genreSlug = params.genre.slug;
   const occasion = params.occasion;
-  console.log(`[AI Fallback] Serving editor's picks for ${genreSlug}/${occasion}`);
+  trackFallback("editors-pick", "generateOutfits");
   return {
     source: "editors-pick",
     outfits: getEditorsPicks(genreSlug, occasion),

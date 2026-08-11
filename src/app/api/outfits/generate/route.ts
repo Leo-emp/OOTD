@@ -15,6 +15,8 @@ import { generateOutfitsWithFallback } from "@/lib/ai/fallback";
 import { smartSearch } from "@/lib/catalog/search";
 import { getUserPreferences } from "@/lib/ai/preferences";
 import { getUserPlan } from "@/lib/stripe/plan";
+import { isEnabled, trackExposure } from "@/lib/flags";
+import { traceAiCall } from "@/lib/observability";
 import type { CandidateItem } from "@/lib/ai/provider";
 import type { Outfit, OutfitItem } from "@/types/outfit";
 import type { BodyProfile } from "@/lib/styling/body-rules";
@@ -142,25 +144,35 @@ export async function GET(request: NextRequest) {
     ? (profile.colorPreferences as unknown as ColorProfile)
     : undefined;
 
-  // Step 6: Generate outfits via Gemini (with 3-tier fallback)
-  // Returns discriminated result — either AI format (needs enrichment) or editor's picks (ready to go)
+  // Step 6: Check feature flags for experimental pipelines
+  const useSemanticSearch = await isEnabled("semantic-search", session.user.id);
+  if (useSemanticSearch) {
+    trackExposure("semantic-search", "enabled").catch(() => {});
+  }
+
+  // Step 7: Generate outfits via Gemini (with 3-tier fallback)
   const genreRuleset = {
     ...genre,
     isActive: genre.isActive ?? undefined,
     moodImageUrl: genre.moodImageUrl ?? undefined,
   };
 
-  const fallbackResult = await generateOutfitsWithFallback(
-    {
-      genre: genreRuleset,
-      candidateItems: allCandidates,
-      occasion,
-      weather,
-      userPreferences: userPrefs,
-      bodyProfile,
-      colorProfile,
-    },
-    cacheKey
+  const fallbackResult = await traceAiCall(
+    "outfitGeneration",
+    session.user.id,
+    () => generateOutfitsWithFallback(
+      {
+        genre: genreRuleset,
+        candidateItems: allCandidates,
+        occasion,
+        weather,
+        userPreferences: userPrefs,
+        bodyProfile,
+        colorProfile,
+      },
+      cacheKey
+    ),
+    { genre: genreSlug, occasion, candidateCount: allCandidates.length, useSemanticSearch }
   );
 
   // Tier 3 short-circuit — editor's picks come pre-built with full item data
