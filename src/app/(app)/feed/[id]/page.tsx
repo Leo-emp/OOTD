@@ -92,7 +92,7 @@ export default function PostDetailPage() {
       const res = await fetch("/api/feed/follow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetUserId: post.userId }),
+        body: JSON.stringify({ userId: post.userId }),
       });
       if (res.ok) {
         const data = await res.json();

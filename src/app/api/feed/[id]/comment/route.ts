@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { postComments, outfitPosts } from "@/lib/db/schema";
+import { postComments, outfitPosts, notifications } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { nanoid } from "nanoid";
@@ -48,6 +48,22 @@ export async function POST(
       .update(outfitPosts)
       .set({ commentsCount: sql`${outfitPosts.commentsCount} + 1` })
       .where(eq(outfitPosts.id, postId));
+
+    // Notify post owner (fire-and-forget)
+    const post = await db.query.outfitPosts.findFirst({
+      where: eq(outfitPosts.id, postId),
+      columns: { userId: true },
+    });
+    if (post && post.userId !== session.user.id) {
+      db.insert(notifications).values({
+        id: nanoid(),
+        userId: post.userId,
+        type: "post_comment",
+        title: "New comment on your post",
+        message: `${session.user.name.split(" ")[0]}: "${sanitized.slice(0, 80)}${sanitized.length > 80 ? "..." : ""}"`,
+        actionUrl: `/feed/${postId}`,
+      }).catch(() => {});
+    }
 
     return NextResponse.json({
       id: commentId,

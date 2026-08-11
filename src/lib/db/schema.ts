@@ -480,3 +480,21 @@ export const preGeneratedOutfits = sqliteTable("pre_generated_outfits", {
 }, (t) => [
   index("pregen_user_date_idx").on(t.userId, t.weatherDate),
 ]);
+
+// ─── In-App Notifications ──────────────────────────
+// Streak reminders, challenge nudges, social activity, shopping alerts
+export const notifications = sqliteTable("notifications", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // "streak_reminder" | "challenge_ending" | "new_follower" | "post_liked" | "post_comment" | "shopping_alert" | "weekly_digest"
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  actionUrl: text("action_url"), // deep link to relevant page
+  read: integer("read", { mode: "boolean" }).default(false),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (t) => [
+  index("notif_user_read_idx").on(t.userId, t.read),
+  index("notif_user_created_idx").on(t.userId, t.createdAt),
+]);

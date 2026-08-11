@@ -13,6 +13,7 @@ import { Sparkles, Compass, MapPin, CloudSun, Shirt, Palette, Camera, Pin, Flame
 import Link from "next/link";
 import { useSession } from "@/lib/auth/client";
 import { GENRES } from "@/lib/constants";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -99,6 +100,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <NotificationBell />
           <Link
             href="/pinterest"
             className="flex items-center gap-1.5 rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-xs text-neutral-400 transition hover:text-white hover:bg-white/10"

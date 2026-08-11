@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { follows } from "@/lib/db/schema";
+import { follows, notifications } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { nanoid } from "nanoid";
@@ -51,6 +51,17 @@ export async function POST(request: NextRequest) {
         followerId: session.user.id,
         followingId: body.userId,
       });
+
+      // Notify the followed user (fire-and-forget)
+      db.insert(notifications).values({
+        id: nanoid(),
+        userId: body.userId,
+        type: "new_follower",
+        title: "New follower!",
+        message: `${session.user.name.split(" ")[0]} started following you.`,
+        actionUrl: "/feed",
+      }).catch(() => {});
+
       return NextResponse.json({ following: true });
     }
   } catch (err) {
