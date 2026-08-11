@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // ─── Users ───────────────────────────────────────────
@@ -91,7 +91,10 @@ export const wardrobeItems = sqliteTable("wardrobe_items", {
   status: text("status").default("processing"), // "processing" | "ready" | "rejected"
   rejectionReason: text("rejection_reason"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
-});
+}, (t) => [
+  index("wardrobe_user_idx").on(t.userId),
+  index("wardrobe_user_category_idx").on(t.userId, t.category),
+]);
 
 // ─── Catalog Items ───────────────────────────────────
 // Fashion products from ShopStyle Collective (25M+ items)
@@ -115,7 +118,11 @@ export const catalogItems = sqliteTable("catalog_items", {
   source: text("source").notNull(), // "shopstyle" | "demo"
   externalId: text("external_id").notNull(),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
-});
+}, (t) => [
+  index("catalog_category_idx").on(t.category),
+  index("catalog_brand_idx").on(t.brand),
+  index("catalog_source_external_idx").on(t.source, t.externalId),
+]);
 
 // ─── Catalog Embeddings ──────────────────────────────
 // Vector index for similarity search (sqlite-vec at launch, Qdrant at 5K+ users)
@@ -141,7 +148,10 @@ export const outfits = sqliteTable("outfits", {
   styleExplanation: text("style_explanation"), // AI-generated styling notes
   source: text("source").notNull(), // "ai" | "pre-generated" | "cached" | "editors-pick"
   createdAt: text("created_at").default(sql`(datetime('now'))`),
-});
+}, (t) => [
+  index("outfits_user_idx").on(t.userId),
+  index("outfits_user_genre_idx").on(t.userId, t.genreId),
+]);
 
 // ─── Outfit Items (junction) ─────────────────────────
 // Links outfits to their component items (catalog or wardrobe)
@@ -153,7 +163,10 @@ export const outfitItems = sqliteTable("outfit_items", {
   itemId: text("item_id").notNull(),
   itemType: text("item_type").notNull(), // "catalog" | "wardrobe"
   position: text("position").notNull(), // "top" | "bottom" | "shoes" | "accessory" | "outerwear" | "bag"
-});
+}, (t) => [
+  index("outfit_items_outfit_idx").on(t.outfitId),
+  index("outfit_items_item_idx").on(t.itemId),
+]);
 
 // ─── Outfit Ratings ──────────────────────────────────
 // User feedback — love/skip/hate trains the preference model
@@ -167,7 +180,10 @@ export const outfitRatings = sqliteTable("outfit_ratings", {
     .references(() => outfits.id, { onDelete: "cascade" }),
   rating: text("rating").notNull(), // "love" | "skip" | "hate"
   createdAt: text("created_at").default(sql`(datetime('now'))`),
-});
+}, (t) => [
+  index("ratings_user_idx").on(t.userId),
+  index("ratings_outfit_idx").on(t.outfitId),
+]);
 
 // ─── User Preferences (Learned) ──────────────────────
 // Behavioral data derived from ratings — code-based scoring, not LLM
@@ -196,7 +212,10 @@ export const chatHistory = sqliteTable("chat_history", {
   contextGenre: text("context_genre"),
   imageUrl: text("image_url"), // if user uploaded a photo for analysis
   createdAt: text("created_at").default(sql`(datetime('now'))`),
-});
+}, (t) => [
+  index("chat_user_idx").on(t.userId),
+  index("chat_user_genre_idx").on(t.userId, t.contextGenre),
+]);
 
 // ─── Subscriptions ───────────────────────────────────
 // Stripe billing state — free or pro ($24.99/mo, $199/yr)
@@ -213,7 +232,9 @@ export const subscriptions = sqliteTable("subscriptions", {
   currentPeriodEnd: text("current_period_end"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
-});
+}, (t) => [
+  index("subs_stripe_customer_idx").on(t.stripeCustomerId),
+]);
 
 // ─── Pinterest Connections ───────────────────────────
 // OAuth tokens for Pinterest integration (Vibe Match, Shop the Pin)
@@ -226,6 +247,105 @@ export const pinterestConnections = sqliteTable("pinterest_connections", {
   accessToken: text("access_token").notNull(),
   connectedAt: text("connected_at").default(sql`(datetime('now'))`),
 });
+
+// ─── Style Streaks ──────────────────────────────────
+// Tracks daily outfit logging — gamification to drive daily opens
+// Each row = one day the user logged what they wore
+export const styleStreaks = sqliteTable("style_streaks", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  date: text("date").notNull(), // "2026-08-11" — one entry per day max
+  outfitId: text("outfit_id"), // optional link to the outfit they logged
+  genreSlug: text("genre_slug"), // which genre they wore
+  note: text("note"), // optional "how I felt" note
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (t) => [
+  index("streaks_user_date_idx").on(t.userId, t.date),
+  index("streaks_user_idx").on(t.userId),
+]);
+
+// ─── Style Snapshots ────────────────────────────────
+// Monthly genre preference snapshot — powers the Style Evolution Timeline
+// Cron captures genre breakdown from ratings/streaks at end of each month
+export const styleSnapshots = sqliteTable("style_snapshots", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  month: text("month").notNull(), // "2026-08" — one per month per user
+  // Genre percentages as JSON — { "old-money": 45, "minimalist": 30, ... }
+  genreBreakdown: text("genre_breakdown", { mode: "json" }).$type<Record<string, number>>().notNull(),
+  // Summary stats for the month
+  totalOutfits: integer("total_outfits").default(0),
+  topGenre: text("top_genre").notNull(),
+  avgRating: real("avg_rating"), // average outfit rating this month
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (t) => [
+  index("snapshots_user_month_idx").on(t.userId, t.month),
+]);
+
+// ─── Challenges ─────────────────────────────────────
+// Predefined style challenges — "5-day minimalist challenge", "weekend streetwear", etc.
+export const challenges = sqliteTable("challenges", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  genreSlug: text("genre_slug").notNull(), // which genre this challenge focuses on
+  durationDays: integer("duration_days").notNull(), // 3, 5, 7
+  difficulty: text("difficulty").notNull(), // "easy" | "medium" | "hard"
+  badgeEmoji: text("badge_emoji").notNull(), // emoji badge on completion e.g. "🎩"
+  // Tips for each day as JSON array — ["Day 1: Start with...", "Day 2: Try..."]
+  dailyTips: text("daily_tips", { mode: "json" }).$type<string[]>().notNull(),
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+});
+
+// ─── Challenge Progress ─────────────────────────────
+// Tracks a user's enrollment and daily progress in a challenge
+export const challengeProgress = sqliteTable("challenge_progress", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  challengeId: text("challenge_id")
+    .notNull()
+    .references(() => challenges.id),
+  startDate: text("start_date").notNull(), // "2026-08-11"
+  // Days completed as JSON array of dates — ["2026-08-11", "2026-08-12"]
+  completedDays: text("completed_days", { mode: "json" }).$type<string[]>().default([]),
+  status: text("status").notNull().default("active"), // "active" | "completed" | "abandoned"
+  completedAt: text("completed_at"), // set when all days done
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (t) => [
+  index("challenge_progress_user_idx").on(t.userId),
+  index("challenge_progress_user_challenge_idx").on(t.userId, t.challengeId),
+]);
+
+// ─── Seasonal Audits ────────────────────────────────
+// Cached quarterly wardrobe gap analysis results
+// "You're missing 3 fall essentials for Old Money" — drives shopping
+export const seasonalAudits = sqliteTable("seasonal_audits", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  season: text("season").notNull(), // "fall-2026", "winter-2026"
+  genreSlug: text("genre_slug").notNull(), // which genre was audited
+  // AI analysis results as JSON
+  missingItems: text("missing_items", { mode: "json" }).$type<{
+    category: string;
+    suggestion: string;
+    priority: "essential" | "nice-to-have";
+  }[]>().notNull(),
+  score: integer("score").notNull(), // 0-100 wardrobe readiness score
+  summary: text("summary").notNull(), // "Your Old Money fall wardrobe is 65% ready"
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (t) => [
+  index("seasonal_user_season_idx").on(t.userId, t.season),
+]);
 
 // ─── Pre-Generated Outfits ──────────────────────────
 // Nightly cron batch results — 10 outfits per active user for instant morning display
@@ -240,4 +360,6 @@ export const preGeneratedOutfits = sqliteTable("pre_generated_outfits", {
   weatherDate: text("weather_date").notNull(), // "2026-08-11"
   outfitsJson: text("outfits_json", { mode: "json" }).notNull(),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
-});
+}, (t) => [
+  index("pregen_user_date_idx").on(t.userId, t.weatherDate),
+]);

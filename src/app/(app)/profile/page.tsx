@@ -5,7 +5,7 @@ import { useSession, signOut } from "@/lib/auth/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Heart, Palette, Shirt, Settings, Camera, Calendar } from "lucide-react";
+import { Heart, Palette, Shirt, Settings, Camera, Calendar, Flame, Swords, TrendingUp, Leaf } from "lucide-react";
 import { StyleDnaCard } from "@/components/profile/StyleDnaCard";
 import { PageTransition } from "@/components/ui/PageTransition";
 
@@ -299,6 +299,39 @@ function ProfileContent() {
           <div>
             <p className="text-sm font-medium text-white">Calendar</p>
             <p className="text-[10px] text-neutral-500 uppercase tracking-wider">History</p>
+          </div>
+        </Link>
+      </div>
+
+      {/* Retention features */}
+      <h3 className="font-heading font-semibold text-white mb-3">Your Style Journey</h3>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <Link href="/streaks" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <Flame size={18} className="text-orange-400" />
+          <div>
+            <p className="text-sm font-medium text-white">Streak</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Daily Log</p>
+          </div>
+        </Link>
+        <Link href="/challenges" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <Swords size={18} className="text-red-400" />
+          <div>
+            <p className="text-sm font-medium text-white">Challenges</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Try New</p>
+          </div>
+        </Link>
+        <Link href="/style-evolution" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <TrendingUp size={18} className="text-brand-purple" />
+          <div>
+            <p className="text-sm font-medium text-white">Evolution</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Timeline</p>
+          </div>
+        </Link>
+        <Link href="/seasonal-refresh" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <Leaf size={18} className="text-green-400" />
+          <div>
+            <p className="text-sm font-medium text-white">Seasonal</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Refresh</p>
           </div>
         </Link>
       </div>

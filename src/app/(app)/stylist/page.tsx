@@ -4,21 +4,7 @@ import { useState } from "react";
 import { ChatUI } from "@/components/chat/ChatUI";
 import { GenreSelector } from "@/components/genre/GenreSelector";
 import { PageTransition } from "@/components/ui/PageTransition";
-
-const GENRES = [
-  { slug: "old-money", name: "Old Money" },
-  { slug: "y2k", name: "Y2K" },
-  { slug: "streetwear", name: "Streetwear" },
-  { slug: "minimalist", name: "Minimalist" },
-  { slug: "cottagecore", name: "Cottagecore" },
-  { slug: "dark-academia", name: "Dark Academia" },
-  { slug: "coastal-grandma", name: "Coastal Grandma" },
-  { slug: "grunge", name: "Grunge" },
-  { slug: "coquette", name: "Coquette" },
-  { slug: "gorpcore", name: "Gorpcore" },
-  { slug: "clean-girl", name: "Clean Girl" },
-  { slug: "indie-boho", name: "Indie/Boho" },
-];
+import { GENRES } from "@/lib/constants";
 
 export default function StylistPage() {
   const [activeGenre, setActiveGenre] = useState("old-money");

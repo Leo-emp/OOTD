@@ -108,57 +108,72 @@ export async function searchAllGenres(params: {
 }
 
 // Get all available brands for a genre (for filter UI)
+// Uses SELECT DISTINCT instead of fetching all rows then deduplicating in JS
 export async function getGenreBrands(genreSlug: string): Promise<string[]> {
-  const items = await db.query.catalogItems.findMany({
-    where: and(
+  const rows = await db
+    .selectDistinct({ brand: catalogItems.brand })
+    .from(catalogItems)
+    .where(and(
       eq(catalogItems.inStock, true),
       like(catalogItems.genreTags, `%"${genreSlug}"%`)
-    ),
-    columns: { brand: true },
-  });
+    ))
+    .orderBy(catalogItems.brand);
 
-  // Deduplicate and sort alphabetically
-  const brands = [...new Set(items.map((i) => i.brand))].sort();
-  return brands;
+  return rows.map((r) => r.brand);
 }
 
 // Get price range for a genre (for filter UI slider)
+// Uses MIN/MAX aggregation instead of fetching all prices into JS
 export async function getGenrePriceRange(genreSlug: string): Promise<{ min: number; max: number }> {
-  const items = await db.query.catalogItems.findMany({
-    where: and(
+  const result = await db
+    .select({
+      minPrice: sql<number>`MIN(${catalogItems.price})`,
+      maxPrice: sql<number>`MAX(${catalogItems.price})`,
+    })
+    .from(catalogItems)
+    .where(and(
       eq(catalogItems.inStock, true),
       like(catalogItems.genreTags, `%"${genreSlug}"%`)
-    ),
-    columns: { price: true },
-  });
+    ));
 
-  if (items.length === 0) return { min: 0, max: 500 };
+  const row = result[0];
+  if (!row?.minPrice && !row?.maxPrice) return { min: 0, max: 500 };
 
-  const prices = items.map((i) => i.price);
   return {
-    min: Math.floor(Math.min(...prices)),
-    max: Math.ceil(Math.max(...prices)),
+    min: Math.floor(row.minPrice ?? 0),
+    max: Math.ceil(row.maxPrice ?? 500),
   };
 }
 
 // Count items per genre (for dashboard stats)
+// Single query with conditional counts instead of 12 separate queries (N+1 fix)
 export async function getCatalogStats(): Promise<Record<string, number>> {
   const genres = [
     "old-money", "y2k", "streetwear", "minimalist",
     "cottagecore", "dark-academia", "coastal-grandma", "grunge",
     "coquette", "gorpcore", "clean-girl", "indie-boho",
-  ];
+  ] as const;
 
+  // Single query: count per genre using conditional SUM
+  const rows = await db
+    .select({
+      genreTags: catalogItems.genreTags,
+    })
+    .from(catalogItems)
+    .where(eq(catalogItems.inStock, true));
+
+  // Count in-memory — 1 query instead of 12
   const stats: Record<string, number> = {};
   for (const genre of genres) {
-    const items = await db.query.catalogItems.findMany({
-      where: and(
-        eq(catalogItems.inStock, true),
-        like(catalogItems.genreTags, `%"${genre}"%`)
-      ),
-      columns: { id: true },
-    });
-    stats[genre] = items.length;
+    stats[genre] = 0;
+  }
+  for (const row of rows) {
+    const tags = JSON.stringify(row.genreTags);
+    for (const genre of genres) {
+      if (tags.includes(`"${genre}"`)) {
+        stats[genre]++;
+      }
+    }
   }
 
   return stats;

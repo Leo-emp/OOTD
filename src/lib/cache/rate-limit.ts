@@ -42,6 +42,41 @@ export const uploadRateLimit = {
   }),
 };
 
+// AI vision routes — Gemini Vision calls are expensive
+export const visionRateLimit = {
+  free: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, "1 d"),
+    prefix: "rl:vision:free",
+  }),
+  pro: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(30, "1 d"),
+    prefix: "rl:vision:pro",
+  }),
+};
+
+// Quiz submissions — DB writes, shouldn't be spammable
+export const quizRateLimit = {
+  free: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, "1 d"),
+    prefix: "rl:quiz:free",
+  }),
+  pro: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(10, "1 d"),
+    prefix: "rl:quiz:pro",
+  }),
+};
+
+// Stripe checkout — prevent session creation spam
+export const checkoutRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, "1 h"),
+  prefix: "rl:checkout",
+});
+
 // Flat-lay rendering — CPU-heavy, needs its own limit
 export const flatLayRateLimit = {
   free: new Ratelimit({

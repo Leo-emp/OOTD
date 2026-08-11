@@ -10,36 +10,51 @@ import { eq } from "drizzle-orm";
 import { fetchPin, parsePinterestUrl } from "@/lib/pinterest/client";
 import { analyzePinImage } from "@/lib/pinterest/vibe-match";
 import { smartSearch } from "@/lib/catalog/search";
+import { checkRateLimit, visionRateLimit } from "@/lib/cache/rate-limit";
+import { getUserPlan } from "@/lib/stripe/plan";
+import { z } from "zod";
+
+// Validate request body — must provide a Pinterest pin URL
+const ShopPinSchema = z.object({
+  url: z.string().url().max(500),
+});
 
 export async function POST(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const connection = await db.query.pinterestConnections.findFirst({
-    where: eq(pinterestConnections.userId, session.user.id),
-  });
-
-  if (!connection) {
-    return NextResponse.json({ error: "Pinterest not connected" }, { status: 400 });
-  }
-
-  const body = await request.json();
-  const { url } = body as { url: string };
-
-  if (!url) {
-    return NextResponse.json({ error: "Provide a Pinterest pin URL" }, { status: 400 });
-  }
-
-  const parsed = parsePinterestUrl(url);
-  if (!parsed || parsed.type !== "pin") {
-    return NextResponse.json({ error: "Invalid pin URL" }, { status: 400 });
-  }
-
   try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Rate limit — Gemini Vision + catalog search
+    const plan = await getUserPlan(session.user.id);
+    const { success } = await checkRateLimit(visionRateLimit[plan], session.user.id);
+    if (!success) {
+      return NextResponse.json({ error: "Daily shop limit reached. Upgrade to Pro for more." }, { status: 429 });
+    }
+
+    const connection = await db.query.pinterestConnections.findFirst({
+      where: eq(pinterestConnections.userId, session.user.id),
+    });
+
+    if (!connection) {
+      return NextResponse.json({ error: "Pinterest not connected" }, { status: 400 });
+    }
+
+    // Validate request body with Zod
+    const body = await request.json();
+    const parsed = ShopPinSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Provide a valid Pinterest pin URL" }, { status: 400 });
+    }
+
+    const urlParsed = parsePinterestUrl(parsed.data.url);
+    if (!urlParsed || urlParsed.type !== "pin") {
+      return NextResponse.json({ error: "Invalid pin URL" }, { status: 400 });
+    }
+
     // Step 1: Fetch the pin data
-    const pin = await fetchPin(connection.accessToken, parsed.id);
+    const pin = await fetchPin(connection.accessToken, urlParsed.id);
 
     // Step 2: Analyze the pin's aesthetic with Gemini Vision
     const vibeResult = await analyzePinImage(pin.imageUrl);

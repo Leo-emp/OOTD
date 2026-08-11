@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 
 // Signal types that match the engagement API
 type SignalType = "view" | "click_item" | "click_buy" | "save" | "share" | "flatlay" | "unsave" | "time_long";
@@ -34,6 +34,27 @@ export function useEngagement() {
       body: JSON.stringify({ signals }),
     }).catch(() => {});
   }, []);
+
+  // Flush on tab hide/close so signals aren't lost
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (document.visibilityState === "hidden") flush();
+    }
+    function onBeforeUnload() {
+      // Use sendBeacon for reliable delivery during page unload
+      if (bufferRef.current.length === 0) return;
+      const signals = [...bufferRef.current];
+      bufferRef.current = [];
+      navigator.sendBeacon("/api/engagement", JSON.stringify({ signals }));
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [flush]);
 
   // Add a signal to the buffer, auto-flush after 10 signals or 30s
   const track = useCallback((signal: EngagementSignal) => {

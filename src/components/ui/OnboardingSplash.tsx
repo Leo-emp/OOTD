@@ -10,6 +10,10 @@ export function OnboardingSplash() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
+    // Skip animations for users who prefer reduced motion
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
+
     // Only show if user hasn't seen it this session
     try {
       const seen = sessionStorage.getItem("ootd-splash-seen");

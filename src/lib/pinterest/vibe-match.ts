@@ -3,11 +3,13 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { PinterestPin } from "./client";
+import { requireEnv } from "@/lib/env";
+import { GEMINI_MODEL } from "@/lib/constants";
 
 // Lazy-init Gemini for vision analysis
 let _genai: GoogleGenerativeAI | null = null;
 function getGenAI() {
-  if (!_genai) _genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  if (!_genai) _genai = new GoogleGenerativeAI(requireEnv("GEMINI_API_KEY"));
   return _genai;
 }
 
@@ -27,7 +29,7 @@ export interface VibeMatchResult {
 
 // Analyze a set of pins from a board — batch vision analysis
 export async function analyzeBoard(pins: PinterestPin[]): Promise<VibeMatchResult> {
-  const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = getGenAI().getGenerativeModel({ model: GEMINI_MODEL });
 
   // Build a text description of the pins for analysis
   // Using descriptions + titles + colors (more token-efficient than sending images)
@@ -78,12 +80,22 @@ Percentages must add to 100. Be specific in style notes — mention actual garme
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Failed to parse vibe match response");
 
-  return JSON.parse(jsonMatch[0]) as VibeMatchResult;
+  return safeParseVibeMatch(jsonMatch[0]);
+}
+
+// Safe JSON parse for vibe match responses
+function safeParseVibeMatch(text: string): VibeMatchResult {
+  try {
+    return JSON.parse(text) as VibeMatchResult;
+  } catch {
+    console.error("[VibeMatch] Invalid JSON:", text.slice(0, 200));
+    throw new Error("AI returned invalid JSON for vibe match. Please try again.");
+  }
 }
 
 // Analyze a single pin image — uses vision model for direct image analysis
 export async function analyzePinImage(imageUrl: string): Promise<VibeMatchResult> {
-  const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = getGenAI().getGenerativeModel({ model: GEMINI_MODEL });
 
   // Fetch the image and convert to base64
   const imgRes = await fetch(imageUrl);
@@ -122,7 +134,7 @@ Percentages must add to 100.`;
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Failed to parse vibe match response");
 
-  return JSON.parse(jsonMatch[0]) as VibeMatchResult;
+  return safeParseVibeMatch(jsonMatch[0]);
 }
 
 // Find catalog items similar to a Pinterest pin's aesthetic

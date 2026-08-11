@@ -1,12 +1,13 @@
 import { Redis } from "@upstash/redis";
+import { requireEnv } from "@/lib/env";
 
 // Lazy-initialized Upstash Redis — avoids crash at build time
 let _redis: Redis | null = null;
 function getRedis(): Redis {
   if (!_redis) {
     _redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      url: requireEnv("UPSTASH_REDIS_REST_URL"),
+      token: requireEnv("UPSTASH_REDIS_REST_TOKEN"),
     });
   }
   return _redis;

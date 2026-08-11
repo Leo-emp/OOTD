@@ -7,15 +7,20 @@ import { eq, desc } from "drizzle-orm";
 
 // GET — list user's wardrobe items
 export async function GET() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const items = await db.query.wardrobeItems.findMany({
+      where: eq(wardrobeItems.userId, session.user.id),
+      orderBy: desc(wardrobeItems.createdAt),
+    });
+
+    return NextResponse.json({ items });
+  } catch (err) {
+    console.error("[API] GET /api/wardrobe failed:", err);
+    return NextResponse.json({ error: "Failed to fetch wardrobe" }, { status: 500 });
   }
-
-  const items = await db.query.wardrobeItems.findMany({
-    where: eq(wardrobeItems.userId, session.user.id),
-    orderBy: desc(wardrobeItems.createdAt),
-  });
-
-  return NextResponse.json({ items });
 }

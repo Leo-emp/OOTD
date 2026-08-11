@@ -10,7 +10,7 @@ type EmptyStateVariant = "wardrobe" | "saved" | "history" | "calendar" | "generi
 // Wardrobe empty state — floating hanger with garments
 function WardrobeIllustration() {
   return (
-    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       {/* Hanger hook */}
       <motion.path
         d="M60 12 C60 6 66 2 72 6"
@@ -92,7 +92,7 @@ function WardrobeIllustration() {
 // Saved outfits empty state — heart with outfit grid
 function SavedIllustration() {
   return (
-    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       {/* Heart outline */}
       <motion.path
         d="M60 100 C20 70 10 40 30 25 C45 14 58 24 60 32 C62 24 75 14 90 25 C110 40 100 70 60 100Z"
@@ -136,7 +136,7 @@ function SavedIllustration() {
 // Calendar empty state — calendar page with no events
 function CalendarIllustration() {
   return (
-    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       {/* Calendar body */}
       <motion.rect x="20" y="28" width="80" height="76" rx="8"
         stroke="url(#calGrad)" strokeWidth="2" fill="rgba(192,132,252,0.04)"

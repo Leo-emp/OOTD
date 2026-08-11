@@ -41,21 +41,26 @@ export async function POST(request: NextRequest) {
 // GET /api/catalog/sync — check catalog health (stats per genre)
 // Protected — only cron/admin can view sync stats
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
+  try {
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
 
-  if (!cronSecret) {
-    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
-  }
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const stats = await getCatalogStats();
-  const total = Object.values(stats).reduce((a, b) => a + b, 0);
+    if (!cronSecret) {
+      return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+    }
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const stats = await getCatalogStats();
+    const total = Object.values(stats).reduce((a, b) => a + b, 0);
 
-  return NextResponse.json({
-    total,
-    perGenre: stats,
-    healthy: total > 100,
-  });
+    return NextResponse.json({
+      total,
+      perGenre: stats,
+      healthy: total > 100,
+    });
+  } catch (err) {
+    console.error("[API] GET /api/catalog/sync failed:", err);
+    return NextResponse.json({ error: "Failed to get catalog stats" }, { status: 500 });
+  }
 }

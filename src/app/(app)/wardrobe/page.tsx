@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { WardrobeGridSkeleton } from "@/components/ui/ContentSkeleton";
 import { PageTransition } from "@/components/ui/PageTransition";
+import { GENRES } from "@/lib/constants";
 
 interface WardrobeItem {
   id: string;
@@ -146,7 +147,7 @@ export default function WardrobePage() {
             {items.length} items
           </p>
         </div>
-        <label className="flex h-10 items-center gap-2 rounded-xl gradient-bg px-4 text-sm font-medium text-white transition hover:opacity-90 cursor-pointer">
+        <label aria-label="Upload wardrobe items" className="flex h-10 items-center gap-2 rounded-xl gradient-bg px-4 text-sm font-medium text-white transition hover:opacity-90 cursor-pointer">
           <Plus size={16} />
           {uploading
             ? `${uploadProgress.current}/${uploadProgress.total}`
@@ -175,10 +176,11 @@ export default function WardrobePage() {
             <select
               value={activeGenre}
               onChange={(e) => setActiveGenre(e.target.value)}
+              aria-label="Select genre for wardrobe gap analysis"
               className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-neutral-300 focus:outline-none focus:border-brand-purple"
             >
-              {["old-money", "streetwear", "minimalist", "y2k", "dark-academia", "grunge", "cottagecore", "coastal-grandma", "coquette", "gorpcore", "clean-girl", "indie-boho"].map((g) => (
-                <option key={g} value={g} className="bg-neutral-900">{g.replace(/-/g, " ")}</option>
+              {GENRES.map((g) => (
+                <option key={g.slug} value={g.slug} className="bg-neutral-900">{g.name}</option>
               ))}
             </select>
           </div>

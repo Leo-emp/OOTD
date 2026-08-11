@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { ShopButton } from "@/components/outfit/ShopButton";
 import { FlatLayView } from "@/components/outfit/FlatLayView";
@@ -189,11 +190,13 @@ export default function OutfitDetailPage() {
               <div className="relative rounded-2xl overflow-hidden mb-4 group">
                 <div className="aspect-[3/4] bg-white/5 relative">
                   {sortedItems[0]?.imageUrl ? (
-                    <img
+                    <Image
                       src={sortedItems[0].imageUrl}
                       alt={sortedItems[0].name}
-                      className="w-full h-full object-cover"
-                      loading="eager"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      priority
+                      className="object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -233,11 +236,12 @@ export default function OutfitDetailPage() {
                   >
                     <div className="aspect-[3/4] bg-white/5 relative">
                       {item.imageUrl ? (
-                        <img
+                        <Image
                           src={item.imageUrl}
                           alt={item.name}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
+                          fill
+                          sizes="(max-width: 768px) 50vw, 25vw"
+                          className="object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center p-3">

@@ -9,10 +9,11 @@ import { outfitRatings, outfits, outfitItems, catalogItems, wardrobeItems } from
 import { eq, and, desc, inArray } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
   const { searchParams } = new URL(request.url);
   const showAll = searchParams.get("all") === "true";
@@ -109,5 +110,9 @@ export async function GET(request: NextRequest) {
     };
   }).filter(Boolean);
 
-  return NextResponse.json({ outfits: enrichedOutfits });
+    return NextResponse.json({ outfits: enrichedOutfits });
+  } catch (err) {
+    console.error("[API] GET /api/outfits/saved failed:", err);
+    return NextResponse.json({ error: "Failed to fetch saved outfits" }, { status: 500 });
+  }
 }

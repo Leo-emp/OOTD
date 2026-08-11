@@ -15,31 +15,36 @@ const RateSchema = z.object({
 
 // POST /api/outfits/rate — record user's feedback on an outfit
 export async function POST(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const parsed = RateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid rating data" }, { status: 400 });
+    }
+
+    const { outfitId, rating } = parsed.data;
+
+    // Store the rating — feeds into preference learning
+    await db.insert(outfitRatings).values({
+      id: nanoid(),
+      userId: session.user.id,
+      outfitId,
+      rating,
+    });
+
+    // Background preference update — doesn't block response
+    updateUserPreferences(session.user.id).catch((e) =>
+      console.error("[Rate] Preference update failed:", e)
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("[API] POST /api/outfits/rate failed:", err);
+    return NextResponse.json({ error: "Failed to rate outfit" }, { status: 500 });
   }
-
-  const body = await request.json();
-  const parsed = RateSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid rating data" }, { status: 400 });
-  }
-
-  const { outfitId, rating } = parsed.data;
-
-  // Store the rating — feeds into preference learning
-  await db.insert(outfitRatings).values({
-    id: nanoid(),
-    userId: session.user.id,
-    outfitId,
-    rating,
-  });
-
-  // Background preference update — doesn't block response
-  updateUserPreferences(session.user.id).catch((e) =>
-    console.error("[Rate] Preference update failed:", e)
-  );
-
-  return NextResponse.json({ success: true });
 }

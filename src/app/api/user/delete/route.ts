@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import {
   users, styleProfiles, wardrobeItems, outfitRatings,
   chatHistory, subscriptions, userPreferencesLearned,
-  outfits, outfitItems,
+  outfits, outfitItems, pinterestConnections, preGeneratedOutfits,
 } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 
@@ -33,8 +33,8 @@ export async function DELETE() {
     await db.delete(outfitItems).where(inArray(outfitItems.outfitId, outfitIds));
   }
 
-  // Delete all user-owned data
-  await Promise.all([
+  // Delete all user-owned data — use allSettled so one table failure doesn't block the rest
+  const results = await Promise.allSettled([
     db.delete(outfitRatings).where(eq(outfitRatings.userId, userId)),
     db.delete(outfits).where(eq(outfits.userId, userId)),
     db.delete(chatHistory).where(eq(chatHistory.userId, userId)),
@@ -42,7 +42,15 @@ export async function DELETE() {
     db.delete(userPreferencesLearned).where(eq(userPreferencesLearned.userId, userId)),
     db.delete(styleProfiles).where(eq(styleProfiles.userId, userId)),
     db.delete(subscriptions).where(eq(subscriptions.userId, userId)),
+    db.delete(pinterestConnections).where(eq(pinterestConnections.userId, userId)),
+    db.delete(preGeneratedOutfits).where(eq(preGeneratedOutfits.userId, userId)),
   ]);
+
+  // Log any partial failures but continue with account deletion
+  const failures = results.filter((r) => r.status === "rejected");
+  if (failures.length > 0) {
+    console.error(`[Account Delete] ${failures.length} table cleanup(s) failed:`, failures);
+  }
 
   // Delete the user account last
   await db.delete(users).where(eq(users.id, userId));

@@ -169,6 +169,7 @@ export function ChatUI({ genreSlug }: { genreSlug: string }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={imageBase64 ? "Add a message (optional)..." : "Ask your stylist..."}
+          aria-label="Chat message"
           className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-brand-purple focus:outline-none"
           disabled={isStreaming}
         />

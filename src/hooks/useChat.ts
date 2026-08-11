@@ -86,7 +86,8 @@ export function useChat(genreSlug: string) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const text = decoder.decode(value);
+        // { stream: true } prevents garbled multi-byte chars at chunk boundaries
+        const text = decoder.decode(value, { stream: true });
         const lines = text.split("\n").filter((l) => l.startsWith("data: "));
 
         for (const line of lines) {

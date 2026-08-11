@@ -5,14 +5,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-
-// Genre accent color map
-const GENRE_COLORS: Record<string, string> = {
-  "old-money": "#C9B99A", "y2k": "#FF69B4", "streetwear": "#FF4D4D",
-  "minimalist": "#94A3B8", "cottagecore": "#86EFAC", "dark-academia": "#8B7355",
-  "coastal-grandma": "#38BDF8", "grunge": "#6B7280", "coquette": "#F9A8D4",
-  "gorpcore": "#A78BFA", "clean-girl": "#2DD4BF", "indie-boho": "#F97316",
-};
+import { GENRE_COLORS } from "@/lib/constants";
 
 interface GenreData {
   name: string;

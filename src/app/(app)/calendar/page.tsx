@@ -98,6 +98,7 @@ export default function OutfitCalendarPage() {
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.back()}
+          aria-label="Go back"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-neutral-400 hover:text-white transition cursor-pointer"
         >
           <ArrowLeft size={18} />

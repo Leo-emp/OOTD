@@ -10,23 +10,28 @@ import { eq } from "drizzle-orm";
 import { fetchBoards } from "@/lib/pinterest/client";
 
 export async function GET(_request: NextRequest) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const connection = await db.query.pinterestConnections.findFirst({
-    where: eq(pinterestConnections.userId, session.user.id),
-  });
-
-  if (!connection) {
-    return NextResponse.json({ connected: false, boards: [] });
-  }
-
   try {
-    const boards = await fetchBoards(connection.accessToken);
-    return NextResponse.json({ connected: true, boards });
-  } catch {
-    return NextResponse.json({ connected: false, boards: [], error: "Token expired" });
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const connection = await db.query.pinterestConnections.findFirst({
+      where: eq(pinterestConnections.userId, session.user.id),
+    });
+
+    if (!connection) {
+      return NextResponse.json({ connected: false, boards: [] });
+    }
+
+    try {
+      const boards = await fetchBoards(connection.accessToken);
+      return NextResponse.json({ connected: true, boards });
+    } catch {
+      return NextResponse.json({ connected: false, boards: [], error: "Token expired" });
+    }
+  } catch (err) {
+    console.error("[API] GET /api/pinterest/boards failed:", err);
+    return NextResponse.json({ error: "Failed to load boards" }, { status: 500 });
   }
 }

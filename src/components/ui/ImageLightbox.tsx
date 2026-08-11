@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { X, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
@@ -26,6 +26,8 @@ export function ImageLightbox({
   const lastPinchDistance = useRef(0);
   // Track drag start position
   const dragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
+  // Ref for focus trap
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Open lightbox — reset zoom and position
   const open = useCallback(() => {
@@ -40,6 +42,45 @@ export function ImageLightbox({
     setScale(1);
     setPosition({ x: 0, y: 0 });
   }, []);
+
+  // Escape key to close + body scroll lock + focus trap
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Lock body scroll
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    // Focus the dialog on open
+    dialogRef.current?.focus();
+
+    // Escape key handler
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") close();
+      // Trap focus inside the dialog
+      if (e.key === "Tab") {
+        const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable?.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen, close]);
 
   // Zoom in/out with limits (1x to 4x)
   const zoomIn = useCallback(() => setScale((s) => Math.min(s + 0.5, 4)), []);
@@ -133,11 +174,16 @@ export function ImageLightbox({
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Viewing ${alt}`}
+            tabIndex={-1}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center"
+            className="fixed inset-0 z-[100] flex items-center justify-center outline-none"
             onClick={(e) => {
               // Close on backdrop click (not on image)
               if (e.target === e.currentTarget) close();

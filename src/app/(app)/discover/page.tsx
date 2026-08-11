@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { GenreSelector } from "@/components/genre/GenreSelector";
+import { GENRES } from "@/lib/constants";
 
 // Catalog item shape from API
 interface CatalogItem {
@@ -83,20 +85,7 @@ export default function DiscoverPage() {
       {/* Genre selector — horizontal scroll */}
       <div className="mb-4">
         <GenreSelector
-          genres={[
-            { slug: "old-money", name: "Old Money" },
-            { slug: "y2k", name: "Y2K" },
-            { slug: "streetwear", name: "Streetwear" },
-            { slug: "minimalist", name: "Minimalist" },
-            { slug: "cottagecore", name: "Cottagecore" },
-            { slug: "dark-academia", name: "Dark Academia" },
-            { slug: "coastal-grandma", name: "Coastal Grandma" },
-            { slug: "grunge", name: "Grunge" },
-            { slug: "coquette", name: "Coquette" },
-            { slug: "gorpcore", name: "Gorpcore" },
-            { slug: "clean-girl", name: "Clean Girl" },
-            { slug: "indie-boho", name: "Indie/Boho" },
-          ]}
+          genres={GENRES}
           activeGenre={genre}
           onSelect={(g) => {
             setGenre(g);
@@ -218,11 +207,12 @@ export default function DiscoverPage() {
               {/* Product image */}
               <div className="aspect-[3/4] rounded-xl overflow-hidden bg-white/5 relative">
                 {item.imageUrls?.[0] ? (
-                  <img
+                  <Image
                     src={item.imageUrls[0]}
                     alt={`${item.brand} ${item.name}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center p-3">

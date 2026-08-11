@@ -2,12 +2,7 @@
 // Genre pages are dynamic (from DB slugs), everything else is static
 
 import type { MetadataRoute } from "next";
-
-const GENRES = [
-  "old-money", "y2k", "streetwear", "minimalist", "cottagecore",
-  "dark-academia", "coastal-grandma", "grunge", "coquette",
-  "gorpcore", "clean-girl", "indie-boho",
-];
+import { GENRE_SLUGS } from "@/lib/constants";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://ootd-ai.vercel.app";
 
@@ -22,7 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   // Genre explorer pages — high SEO value
-  const genrePages: MetadataRoute.Sitemap = GENRES.map((slug) => ({
+  const genrePages: MetadataRoute.Sitemap = GENRE_SLUGS.map((slug) => ({
     url: `${BASE_URL}/genres/${slug}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,

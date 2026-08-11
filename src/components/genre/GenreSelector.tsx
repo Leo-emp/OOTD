@@ -30,7 +30,7 @@ export function GenreSelector({
   activeGenre,
   onSelect,
 }: {
-  genres: Genre[];
+  genres: readonly Genre[];
   activeGenre: string;
   onSelect: (slug: string) => void;
 }) {

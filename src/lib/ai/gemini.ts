@@ -3,24 +3,36 @@ import type { AiProvider, CandidateItem, UserPreferences, QuizAnswer } from "./p
 import type { GenreRuleset } from "@/types/genre";
 import { AiOutfitResponseSchema, AiClothingAnalysisSchema, AiOutfitRatingSchema, AiStyleQuizResultSchema } from "@/types/ai";
 import { buildOutfitPrompt, buildClothingAnalysisPrompt, buildRatingPrompt, buildQuizPrompt } from "./prompts";
+import { requireEnv } from "@/lib/env";
+import { GEMINI_MODEL } from "@/lib/constants";
+
+// Safe JSON parse with descriptive error — Gemini sometimes returns malformed JSON
+function safeParseJson(text: string, context: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.error(`[Gemini] Invalid JSON from ${context}:`, text.slice(0, 200));
+    throw new Error(`AI returned invalid JSON in ${context}. Please try again.`);
+  }
+}
 
 // Lazy-initialized Gemini clients — avoids crash at build time
 let _genai: GoogleGenerativeAI | null = null;
 function getGenAI() {
-  if (!_genai) _genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  if (!_genai) _genai = new GoogleGenerativeAI(requireEnv("GEMINI_API_KEY"));
   return _genai;
 }
 
 function getFlash() {
   return getGenAI().getGenerativeModel({
-    model: "gemini-2.5-flash-preview-05-20",
+    model: GEMINI_MODEL,
     generationConfig: { responseMimeType: "application/json" },
   });
 }
 
 function getFlashChat() {
   return getGenAI().getGenerativeModel({
-    model: "gemini-2.5-flash-preview-05-20",
+    model: GEMINI_MODEL,
   });
 }
 
@@ -28,9 +40,7 @@ export const geminiProvider: AiProvider = {
   async generateOutfits({ genre, candidateItems, occasion, weather, userPreferences, bodyProfile, colorProfile }) {
     const prompt = buildOutfitPrompt(genre, candidateItems, occasion, weather, userPreferences, { bodyProfile, colorProfile });
     const result = await getFlash().generateContent(prompt);
-    const text = result.response.text();
-    const parsed = JSON.parse(text);
-    // Validate against schema — throws if Gemini returned bad data
+    const parsed = safeParseJson(result.response.text(), "generateOutfits");
     return AiOutfitResponseSchema.parse(parsed);
   },
 
@@ -40,7 +50,7 @@ export const geminiProvider: AiProvider = {
       prompt,
       { inlineData: { mimeType: "image/webp", data: imageBase64 } },
     ]);
-    const parsed = JSON.parse(result.response.text());
+    const parsed = safeParseJson(result.response.text(), "analyzeClothing");
     return AiClothingAnalysisSchema.parse(parsed);
   },
 
@@ -50,14 +60,14 @@ export const geminiProvider: AiProvider = {
       prompt,
       { inlineData: { mimeType: "image/webp", data: imageBase64 } },
     ]);
-    const parsed = JSON.parse(result.response.text());
+    const parsed = safeParseJson(result.response.text(), "rateOutfit");
     return AiOutfitRatingSchema.parse(parsed);
   },
 
   async analyzeQuizResults(answers: QuizAnswer[]) {
     const prompt = buildQuizPrompt(answers);
     const result = await getFlash().generateContent(prompt);
-    const parsed = JSON.parse(result.response.text());
+    const parsed = safeParseJson(result.response.text(), "analyzeQuizResults");
     return AiStyleQuizResultSchema.parse(parsed);
   },
 

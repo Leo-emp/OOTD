@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { requireEnv } from "@/lib/env";
 
 // Strip EXIF metadata and resize to max dimension
 // Prevents location/device info leaking + normalizes size
@@ -34,7 +35,7 @@ export async function removeBackground(imageBuffer: Buffer): Promise<Buffer> {
 
   const response = await fetch("https://api.remove.bg/v1.0/removebg", {
     method: "POST",
-    headers: { "X-Api-Key": process.env.REMOVE_BG_API_KEY! },
+    headers: { "X-Api-Key": requireEnv("REMOVE_BG_API_KEY") },
     body: formData,
   });
 

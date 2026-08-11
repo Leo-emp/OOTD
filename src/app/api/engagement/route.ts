@@ -22,32 +22,37 @@ const BatchSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  let body: z.infer<typeof BatchSchema>;
   try {
-    body = BatchSchema.parse(await request.json());
-  } catch {
-    return NextResponse.json({ error: "Invalid signals" }, { status: 400 });
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    let body: z.infer<typeof BatchSchema>;
+    try {
+      body = BatchSchema.parse(await request.json());
+    } catch {
+      return NextResponse.json({ error: "Invalid signals" }, { status: 400 });
+    }
+
+    // Process signals in the background — don't block the response
+    const signals: EngagementSignal[] = body.signals.map((s) => ({
+      type: s.type as SignalType,
+      itemColor: s.itemColor,
+      itemBrand: s.itemBrand,
+      itemCategory: s.itemCategory,
+      itemPrice: s.itemPrice,
+      genreSlug: s.genreSlug,
+    }));
+
+    // Fire-and-forget — engagement tracking should never block UX
+    processEngagementSignals(session.user.id, signals).catch((e) =>
+      console.error("[Engagement] Processing failed:", e)
+    );
+
+    return NextResponse.json({ recorded: signals.length });
+  } catch (err) {
+    console.error("[API] POST /api/engagement failed:", err);
+    return NextResponse.json({ error: "Failed to record engagement" }, { status: 500 });
   }
-
-  // Process signals in the background — don't block the response
-  const signals: EngagementSignal[] = body.signals.map((s) => ({
-    type: s.type as SignalType,
-    itemColor: s.itemColor,
-    itemBrand: s.itemBrand,
-    itemCategory: s.itemCategory,
-    itemPrice: s.itemPrice,
-    genreSlug: s.genreSlug,
-  }));
-
-  // Fire-and-forget — engagement tracking should never block UX
-  processEngagementSignals(session.user.id, signals).catch((e) =>
-    console.error("[Engagement] Processing failed:", e)
-  );
-
-  return NextResponse.json({ recorded: signals.length });
 }

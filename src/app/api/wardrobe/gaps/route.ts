@@ -13,12 +13,13 @@ const ESSENTIAL_CATEGORIES = ["top", "bottom", "shoes"];
 const OPTIONAL_CATEGORIES = ["outerwear", "accessory", "bag"];
 
 export async function GET(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const genreSlug = request.nextUrl.searchParams.get("genre");
+    const genreSlug = request.nextUrl.searchParams.get("genre");
   if (!genreSlug) {
     return NextResponse.json({ error: "Genre required" }, { status: 400 });
   }
@@ -80,14 +81,18 @@ export async function GET(request: NextRequest) {
       (optionalCount / OPTIONAL_CATEGORIES.length) * 30)
   );
 
-  return NextResponse.json({
-    genre: genreSlug,
-    totalItems: genreItems.length,
-    categoryCounts,
-    gaps,
-    completeness,
-    isOutfitReady: essentialCount === ESSENTIAL_CATEGORIES.length,
-  });
+    return NextResponse.json({
+      genre: genreSlug,
+      totalItems: genreItems.length,
+      categoryCounts,
+      gaps,
+      completeness,
+      isOutfitReady: essentialCount === ESSENTIAL_CATEGORIES.length,
+    });
+  } catch (err) {
+    console.error("[API] GET /api/wardrobe/gaps failed:", err);
+    return NextResponse.json({ error: "Failed to analyze wardrobe gaps" }, { status: 500 });
+  }
 }
 
 // Genre-aware shopping suggestions

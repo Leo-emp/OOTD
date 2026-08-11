@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { GENRES, GENRE_COLORS } from "@/lib/constants";
 
 // Style quiz — 5 questions that map to genre preferences
 // Results feed into Style DNA (primary/secondary/accent genres)
@@ -59,36 +60,10 @@ const QUESTIONS = [
   },
 ];
 
-// Genre display names for the results screen
-const GENRE_NAMES: Record<string, string> = {
-  "old-money": "Old Money",
-  "y2k": "Y2K",
-  "streetwear": "Streetwear",
-  "minimalist": "Minimalist",
-  "cottagecore": "Cottagecore",
-  "dark-academia": "Dark Academia",
-  "coastal-grandma": "Coastal Grandma",
-  "grunge": "Grunge",
-  "coquette": "Coquette",
-  "gorpcore": "Gorpcore",
-  "clean-girl": "Clean Girl",
-  "indie-boho": "Indie/Boho",
-};
-
-const GENRE_COLORS: Record<string, string> = {
-  "old-money": "#C9B99A",
-  "y2k": "#FF69B4",
-  "streetwear": "#FF4500",
-  "minimalist": "#A0A0A0",
-  "cottagecore": "#8FBC8F",
-  "dark-academia": "#8B4513",
-  "coastal-grandma": "#87CEEB",
-  "grunge": "#696969",
-  "coquette": "#FFB6C1",
-  "gorpcore": "#556B2F",
-  "clean-girl": "#D4A574",
-  "indie-boho": "#CD853F",
-};
+// Genre display names — derived from shared GENRES constant
+const GENRE_NAMES: Record<string, string> = Object.fromEntries(
+  GENRES.map((g) => [g.slug, g.name])
+);
 
 interface StyleDna {
   primaryGenre: string;

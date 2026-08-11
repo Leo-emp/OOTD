@@ -6,22 +6,7 @@ import Image from "next/image";
 import { Camera, Upload, Star, ArrowLeft, Sparkles, CheckCircle, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
-
-// All 12 genres for the selector
-const GENRES = [
-  { slug: "old-money", name: "Old Money" },
-  { slug: "y2k", name: "Y2K" },
-  { slug: "streetwear", name: "Streetwear" },
-  { slug: "minimalist", name: "Minimalist" },
-  { slug: "cottagecore", name: "Cottagecore" },
-  { slug: "dark-academia", name: "Dark Academia" },
-  { slug: "coastal-grandma", name: "Coastal Grandma" },
-  { slug: "grunge", name: "Grunge" },
-  { slug: "coquette", name: "Coquette" },
-  { slug: "gorpcore", name: "Gorpcore" },
-  { slug: "clean-girl", name: "Clean Girl" },
-  { slug: "indie-boho", name: "Indie/Boho" },
-];
+import { GENRES } from "@/lib/constants";
 
 interface RatingResult {
   score: number;
@@ -161,6 +146,7 @@ export default function RateMyOutfitPage() {
         ) : (
           <button
             onClick={() => fileRef.current?.click()}
+            aria-label="Upload outfit photo for rating"
             className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-3 text-neutral-400 hover:border-brand-purple/30 hover:text-brand-purple transition cursor-pointer"
           >
             <Upload size={32} />

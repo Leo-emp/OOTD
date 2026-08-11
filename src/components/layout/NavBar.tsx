@@ -30,6 +30,7 @@ export function NavBar() {
             <Link
               key={href}
               href={href}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors",
                 active

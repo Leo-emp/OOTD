@@ -7,22 +7,7 @@ import { ArrowLeft, Link2, Sparkles, ShoppingBag, Palette, ExternalLink, Loader2
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { Suspense } from "react";
-
-// Genre color mapping for the results cards
-const GENRE_COLORS: Record<string, string> = {
-  "old-money": "#C9B99A",
-  "y2k": "#FF69B4",
-  "streetwear": "#FF4500",
-  "minimalist": "#A0A0A0",
-  "cottagecore": "#8FBC8F",
-  "dark-academia": "#8B4513",
-  "coastal-grandma": "#87CEEB",
-  "grunge": "#696969",
-  "coquette": "#FFB6C1",
-  "gorpcore": "#556B2F",
-  "clean-girl": "#D4A574",
-  "indie-boho": "#CD853F",
-};
+import { GENRE_COLORS } from "@/lib/constants";
 
 interface VibeResult {
   genres: { slug: string; name: string; percentage: number }[];
@@ -165,6 +150,7 @@ function PinterestContent() {
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.back()}
+          aria-label="Go back"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-neutral-400 hover:text-white transition cursor-pointer"
         >
           <ArrowLeft size={18} />

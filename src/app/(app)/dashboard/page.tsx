@@ -9,25 +9,10 @@ import { GenreSelector } from "@/components/genre/GenreSelector";
 import { useOutfits } from "@/hooks/useOutfits";
 import { useEngagement } from "@/hooks/useEngagement";
 import { useWeather } from "@/hooks/useWeather";
-import { Sparkles, Compass, MapPin, CloudSun, Shirt, Palette, Camera, Pin } from "lucide-react";
+import { Sparkles, Compass, MapPin, CloudSun, Shirt, Palette, Camera, Pin, Flame, Swords, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "@/lib/auth/client";
-
-// All 12 genres — loaded from DB in production, hardcoded here for fast render
-const GENRES = [
-  { slug: "old-money", name: "Old Money" },
-  { slug: "y2k", name: "Y2K" },
-  { slug: "streetwear", name: "Streetwear" },
-  { slug: "minimalist", name: "Minimalist" },
-  { slug: "cottagecore", name: "Cottagecore" },
-  { slug: "dark-academia", name: "Dark Academia" },
-  { slug: "coastal-grandma", name: "Coastal Grandma" },
-  { slug: "grunge", name: "Grunge" },
-  { slug: "coquette", name: "Coquette" },
-  { slug: "gorpcore", name: "Gorpcore" },
-  { slug: "clean-girl", name: "Clean Girl" },
-  { slug: "indie-boho", name: "Indie/Boho" },
-];
+import { GENRES } from "@/lib/constants";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -38,6 +23,7 @@ export default function DashboardPage() {
   const { currentOutfit, currentIndex, hasMore, loading, error, fetchOutfits, rateOutfit, prefetch } = useOutfits();
   const { trackView, trackSave, flush } = useEngagement();
   const { weather } = useWeather();
+  const [streakData, setStreakData] = useState<{ currentStreak: number; loggedToday: boolean } | null>(null);
 
   // Auto-pass weather to outfit generation when available
   const weatherParam = weather?.outfitWeather;
@@ -53,6 +39,16 @@ export default function DashboardPage() {
   useEffect(() => {
     return () => flush();
   }, [flush]);
+
+  // Fetch streak data for dashboard widget
+  useEffect(() => {
+    fetch("/api/streaks")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.currentStreak !== undefined) setStreakData(data);
+      })
+      .catch(() => {});
+  }, []);
 
   // Check if user is new (no saved outfits and no wardrobe)
   useEffect(() => {
@@ -183,6 +179,37 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Streak + retention features row */}
+      <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide">
+        <Link
+          href="/streaks"
+          className="flex items-center gap-2 glass rounded-xl px-3 py-2.5 shrink-0 transition hover:bg-white/10"
+        >
+          <Flame size={16} className="text-orange-400" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-bold text-white">{streakData?.currentStreak || 0}</span>
+            <span className="text-[10px] text-neutral-500">day streak</span>
+          </div>
+          {streakData && !streakData.loggedToday && (
+            <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-pulse" />
+          )}
+        </Link>
+        <Link
+          href="/challenges"
+          className="flex items-center gap-2 glass rounded-xl px-3 py-2.5 shrink-0 transition hover:bg-white/10"
+        >
+          <Swords size={14} className="text-red-400" />
+          <span className="text-xs text-neutral-400">Challenges</span>
+        </Link>
+        <Link
+          href="/style-evolution"
+          className="flex items-center gap-2 glass rounded-xl px-3 py-2.5 shrink-0 transition hover:bg-white/10"
+        >
+          <TrendingUp size={14} className="text-brand-purple" />
+          <span className="text-xs text-neutral-400">Evolution</span>
+        </Link>
+      </div>
 
       {/* Genre selector — horizontal scroll */}
       <div className="mb-6">

@@ -7,6 +7,7 @@ import { headers, cookies } from "next/headers";
 import { exchangeCodeForToken } from "@/lib/pinterest/client";
 import { db } from "@/lib/db";
 import { pinterestConnections } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export async function GET(request: NextRequest) {
@@ -35,11 +36,21 @@ export async function GET(request: NextRequest) {
   try {
     const accessToken = await exchangeCodeForToken(code);
 
-    await db.insert(pinterestConnections).values({
-      id: nanoid(),
-      userId: session.user.id,
-      accessToken,
-    }).onConflictDoNothing();
+    // Upsert — if reconnecting, update the token instead of silently keeping the old expired one
+    const existing = await db.query.pinterestConnections.findFirst({
+      where: eq(pinterestConnections.userId, session.user.id),
+    });
+    if (existing) {
+      await db.update(pinterestConnections)
+        .set({ accessToken, connectedAt: new Date().toISOString() })
+        .where(eq(pinterestConnections.userId, session.user.id));
+    } else {
+      await db.insert(pinterestConnections).values({
+        id: nanoid(),
+        userId: session.user.id,
+        accessToken,
+      });
+    }
 
     return NextResponse.redirect(new URL("/pinterest?connected=true", request.url));
   } catch (err) {

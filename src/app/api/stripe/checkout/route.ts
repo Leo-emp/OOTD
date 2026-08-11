@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createCheckoutSession } from "@/lib/stripe";
 import { z } from "zod";
+import { checkRateLimit, checkoutRateLimit } from "@/lib/cache/rate-limit";
 
 const CheckoutSchema = z.object({
   plan: z.enum(["monthly", "yearly"]),
@@ -15,6 +16,12 @@ export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit — prevent checkout session spam
+  const { success } = await checkRateLimit(checkoutRateLimit, session.user.id);
+  if (!success) {
+    return NextResponse.json({ error: "Too many checkout attempts. Try again later." }, { status: 429 });
   }
 
   const body = await request.json();

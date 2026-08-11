@@ -7,11 +7,16 @@ import { headers } from "next/headers";
 import { getUserPlan } from "@/lib/stripe/plan";
 
 export async function GET() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const plan = await getUserPlan(session.user.id);
-  return NextResponse.json({ plan });
+    const plan = await getUserPlan(session.user.id);
+    return NextResponse.json({ plan });
+  } catch (err) {
+    console.error("[API] GET /api/user/plan failed:", err);
+    return NextResponse.json({ error: "Failed to fetch plan" }, { status: 500 });
+  }
 }

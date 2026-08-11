@@ -21,10 +21,11 @@ import type { BodyProfile } from "@/lib/styling/body-rules";
 import type { ColorProfile } from "@/lib/styling/color-theory";
 
 export async function GET(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
   // Rate limit check — Pro users get higher limits
   const plan = await getUserPlan(session.user.id);
@@ -132,7 +133,11 @@ export async function GET(request: NextRequest) {
   const profile = await db.query.styleProfiles.findFirst({
     where: eq(styleProfiles.userId, session.user.id),
   });
-  const bodyProfile = profile?.bodyType ? JSON.parse(profile.bodyType) as BodyProfile : undefined;
+  // Safe parse — if stored JSON is corrupt, skip rather than crash
+  let bodyProfile: BodyProfile | undefined;
+  if (profile?.bodyType) {
+    try { bodyProfile = JSON.parse(profile.bodyType); } catch { /* skip corrupt data */ }
+  }
   const colorProfile = profile?.colorPreferences
     ? (profile.colorPreferences as unknown as ColorProfile)
     : undefined;
@@ -239,6 +244,10 @@ export async function GET(request: NextRequest) {
     { outfits: responseOutfits, source: fallbackResult.source },
     { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } }
   );
+  } catch (err) {
+    console.error("[API] GET /api/outfits/generate failed:", err);
+    return NextResponse.json({ error: "Failed to generate outfits" }, { status: 500 });
+  }
 }
 
 // Save generated outfits to the DB so IDs are valid for ratings/saves/history

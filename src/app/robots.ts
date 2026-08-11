@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: ["/", "/quiz", "/discover", "/genres/"],
-        disallow: ["/dashboard", "/wardrobe", "/stylist", "/profile", "/outfit/", "/saved", "/settings", "/style-profile", "/rate-my-outfit", "/calendar", "/pinterest", "/api/"],
+        disallow: ["/dashboard", "/wardrobe", "/stylist", "/profile", "/outfit/", "/saved", "/settings", "/style-profile", "/rate-my-outfit", "/calendar", "/pinterest", "/streaks", "/challenges", "/style-evolution", "/seasonal-refresh", "/api/"],
       },
     ],
     sitemap: `${BASE_URL}/sitemap.xml`,
