@@ -10,7 +10,7 @@ import { geminiProvider } from "./gemini";
 import { semanticSearch, findSimilarItems } from "./embeddings";
 import { db } from "@/lib/db";
 import { wardrobeItems, catalogItems, catalogEmbeddings } from "@/lib/db/schema";
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray, like, sql } from "drizzle-orm";
 import type { BodyProfile } from "@/lib/styling/body-rules";
 import type { ColorProfile } from "@/lib/styling/color-theory";
 
@@ -92,7 +92,7 @@ async function searchCatalog(
     const items = await db
       .select({ id: catalogItems.id })
       .from(catalogItems)
-      .where(sql`${catalogItems.genreTags} LIKE '%${genre}%'`)
+      .where(like(catalogItems.genreTags, `%${genre}%`))
       .limit(limit);
     itemIds = items.map((i) => i.id);
   }

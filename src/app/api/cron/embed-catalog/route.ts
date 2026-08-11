@@ -7,11 +7,15 @@ import { embedCatalogItems } from "@/lib/ai/embeddings";
 import { traceAiCall } from "@/lib/observability";
 
 export async function POST(request: NextRequest) {
-  // Verify cron secret — prevents unauthorized calls
-  const authHeader = request.headers.get("authorization");
+  // Verify cron secret — fail closed when not configured
   const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("[Cron] CRON_SECRET is not configured");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
