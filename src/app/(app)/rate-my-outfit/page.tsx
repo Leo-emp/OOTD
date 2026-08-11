@@ -1,12 +1,17 @@
 "use client";
 
+// ── Rate My Outfit ──
+// Upload an outfit photo → AI rates it against a style genre → shareable score card
+// The score card is the viral hook — users share their scores to flex or compete
+
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { Camera, Upload, Star, ArrowLeft, Sparkles, CheckCircle, AlertTriangle } from "lucide-react";
+import { Camera, Upload, Star, ArrowLeft, Sparkles, CheckCircle, AlertTriangle, Share2, Download, Check, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { GENRES } from "@/lib/constants";
+import { generateScoreCard, downloadImage, shareCard } from "@/lib/share-card";
 
 interface RatingResult {
   score: number;
@@ -25,6 +30,7 @@ export default function RateMyOutfitPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [rating, setRating] = useState<RatingResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [shareState, setShareState] = useState<"idle" | "shared" | "downloaded">("idle");
 
   // Handle image selection — show preview
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -64,6 +70,41 @@ export default function RateMyOutfitPage() {
       toast("Failed to rate outfit. Try again.", "error");
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Download the score card as PNG
+  function handleDownloadCard() {
+    if (!rating) return;
+    const dataUrl = generateScoreCard({
+      score: rating.score,
+      genre: selectedGenre,
+      genreAlignment: rating.genreAlignment,
+      feedback: rating.feedback,
+    });
+    downloadImage(dataUrl, `ootd-score-${rating.score}-${selectedGenre}.png`);
+    setShareState("downloaded");
+    setTimeout(() => setShareState("idle"), 2000);
+  }
+
+  // Share the score card via Web Share API
+  async function handleShareCard() {
+    if (!rating) return;
+    const genreName = GENRES.find(g => g.slug === selectedGenre)?.name || selectedGenre;
+    const dataUrl = generateScoreCard({
+      score: rating.score,
+      genre: selectedGenre,
+      genreAlignment: rating.genreAlignment,
+      feedback: rating.feedback,
+    });
+    const shared = await shareCard({
+      title: `I scored ${rating.score}/10!`,
+      text: `My ${genreName} outfit got a ${rating.score}/10 on OOTD AI! Think you can beat it?`,
+      imageDataUrl: dataUrl,
+    });
+    if (shared) {
+      setShareState("shared");
+      setTimeout(() => setShareState("idle"), 2000);
     }
   }
 
@@ -237,11 +278,57 @@ export default function RateMyOutfitPage() {
               </div>
             )}
 
+            {/* Share + Download score card — the viral sharing buttons */}
+            <div className="glass rounded-2xl p-5">
+              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <Sparkles size={14} className="text-brand-pink" />
+                Share your score
+              </h3>
+              <p className="text-xs text-neutral-400 mb-3">
+                Challenge your friends — can they beat your {rating.score}/10?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleShareCard}
+                  className="flex-1 flex items-center justify-center gap-2 gradient-bg rounded-xl py-2.5 text-xs font-semibold text-white cursor-pointer"
+                >
+                  <AnimatePresence mode="wait">
+                    {shareState === "shared" ? (
+                      <motion.span key="shared" initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-1.5">
+                        <Check size={14} /> Shared!
+                      </motion.span>
+                    ) : (
+                      <motion.span key="share" className="flex items-center gap-1.5">
+                        <Share2 size={14} /> Share Score Card
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </button>
+                <button
+                  onClick={handleDownloadCard}
+                  className="flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 bg-white/5 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                >
+                  <AnimatePresence mode="wait">
+                    {shareState === "downloaded" ? (
+                      <motion.span key="done" initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-1.5">
+                        <Check size={14} /> Saved!
+                      </motion.span>
+                    ) : (
+                      <motion.span key="dl" className="flex items-center gap-1.5">
+                        <Download size={14} /> Save
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </button>
+              </div>
+            </div>
+
             {/* Try again button */}
             <button
-              onClick={() => { setRating(null); setImagePreview(null); setImageFile(null); }}
-              className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-neutral-300 hover:bg-white/10 transition cursor-pointer"
+              onClick={() => { setRating(null); setImagePreview(null); setImageFile(null); setShareState("idle"); }}
+              className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-neutral-300 hover:bg-white/10 transition cursor-pointer flex items-center justify-center gap-2"
             >
+              <RotateCcw size={14} />
               Rate another outfit
             </button>
           </motion.div>

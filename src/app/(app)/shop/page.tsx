@@ -1,13 +1,27 @@
 "use client";
 
+// ── Shop For You ──
+// AI-powered shopping recommendations based on wardrobe gaps
+// Now includes budget filter for "Get this look for under $X" viral feature
+// Budget tiers make fashion accessible — drives sharing + affiliate revenue
+
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ShoppingBag, Sparkles, ExternalLink, RefreshCw } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Sparkles, ExternalLink, RefreshCw, DollarSign } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { GENRE_COLORS } from "@/lib/constants";
 import { PageTransition } from "@/components/ui/PageTransition";
+
+// Budget filter options — the viral "get this look for under $X" feature
+const BUDGET_TIERS = [
+  { label: "All", max: Infinity, color: "text-neutral-300" },
+  { label: "Under $25", max: 25, color: "text-green-400" },
+  { label: "Under $50", max: 50, color: "text-blue-400" },
+  { label: "Under $100", max: 100, color: "text-purple-400" },
+  { label: "$100+", max: Infinity, min: 100, color: "text-yellow-400" },
+] as const;
 
 // Recommendation shape from API
 interface ShopRecommendation {
@@ -34,6 +48,7 @@ export default function ShopPage() {
   const [recs, setRecs] = useState<ShopRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [budgetIndex, setBudgetIndex] = useState(0);
 
   // Load existing recommendations
   useEffect(() => {
@@ -67,6 +82,16 @@ export default function ShopPage() {
       setGenerating(false);
     }
   }
+
+  // Filter recommendations by budget tier
+  const activeBudget = BUDGET_TIERS[budgetIndex];
+  const filteredRecs = recs.filter((rec) => {
+    if (budgetIndex === 0) return true;
+    const min = "min" in activeBudget ? activeBudget.min : 0;
+    const max = activeBudget.max;
+    if (min) return rec.item.price >= min;
+    return rec.item.price <= max;
+  });
 
   // Match score color — green/yellow/orange gradient
   function scoreColor(score: number): string {
@@ -111,6 +136,45 @@ export default function ShopPage() {
           </button>
         </div>
 
+        {/* Budget filter — "Get this look for under $X" */}
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-2">
+            <DollarSign size={14} className="text-brand-purple" />
+            <p className="text-xs text-neutral-400 uppercase tracking-wider">Budget</p>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {BUDGET_TIERS.map((tier, i) => (
+              <button
+                key={tier.label}
+                onClick={() => setBudgetIndex(i)}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition cursor-pointer shrink-0 ${
+                  budgetIndex === i
+                    ? "bg-brand-purple/20 text-brand-purple border border-brand-purple/30"
+                    : "glass text-neutral-400 hover:text-neutral-200"
+                }`}
+              >
+                {tier.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Budget banner — "get this look for under $X" */}
+        {budgetIndex > 0 && budgetIndex < 4 && filteredRecs.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass rounded-xl p-3 mb-4 text-center"
+          >
+            <p className="text-sm font-semibold text-white">
+              Get the look for {activeBudget.label.toLowerCase()}
+            </p>
+            <p className="text-xs text-neutral-400 mt-0.5">
+              {filteredRecs.length} piece{filteredRecs.length !== 1 ? "s" : ""} in your budget
+            </p>
+          </motion.div>
+        )}
+
         {/* Loading state */}
         {loading && (
           <div className="space-y-3">
@@ -145,10 +209,20 @@ export default function ShopPage() {
           </div>
         )}
 
+        {/* No results for budget filter */}
+        {!loading && recs.length > 0 && filteredRecs.length === 0 && (
+          <div className="glass rounded-2xl p-6 text-center">
+            <DollarSign size={24} className="mx-auto text-neutral-500 mb-2" />
+            <p className="text-sm text-neutral-400">
+              No items found {activeBudget.label.toLowerCase()}. Try a different budget range.
+            </p>
+          </div>
+        )}
+
         {/* Recommendations list */}
         <div className="space-y-3">
           <AnimatePresence>
-            {recs.map((rec, i) => {
+            {filteredRecs.map((rec, i) => {
               const accentColor = GENRE_COLORS[rec.genreSlug] || "#8B5CF6";
               return (
                 <motion.div

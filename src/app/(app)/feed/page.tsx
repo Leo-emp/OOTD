@@ -1,13 +1,20 @@
 "use client";
 
+// ── Community Feed ──
+// Trending + Following tabs with infinite scroll
+// Now includes Genre Trending graph at top for engagement + FOMO
+// Share buttons on posts for TikTok/IG export
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, MessageCircle, Plus, Users, TrendingUp } from "lucide-react";
+import { Heart, MessageCircle, Plus, Users, TrendingUp, Share2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/components/ui/Toast";
 import { GENRE_COLORS } from "@/lib/constants";
 import { PageTransition } from "@/components/ui/PageTransition";
+import { GenreTrending } from "@/components/feed/GenreTrending";
+import { shareCard } from "@/lib/share-card";
 
 interface FeedPost {
   id: string;
@@ -106,6 +113,16 @@ export default function FeedPage() {
     }
   }
 
+  // Share a post via Web Share API
+  async function handleSharePost(post: FeedPost) {
+    const genreLabel = post.genreSlug.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    await shareCard({
+      title: `${post.userName}'s ${genreLabel} outfit`,
+      text: post.caption || `Check out this ${genreLabel} fit on OOTD AI!`,
+      url: `${window.location.origin}/feed/${post.id}`,
+    });
+  }
+
   // Time ago formatter
   function timeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -137,6 +154,9 @@ export default function FeedPage() {
             Post
           </Link>
         </div>
+
+        {/* Genre Trending graph — shows what genres are hot right now */}
+        <GenreTrending />
 
         {/* Tab selector */}
         <div className="flex gap-1 p-1 glass rounded-xl mb-5">
@@ -247,7 +267,7 @@ export default function FeedPage() {
                     </div>
                   </Link>
 
-                  {/* Actions + caption */}
+                  {/* Actions + caption — now includes share button */}
                   <div className="p-3">
                     <div className="flex items-center gap-4 mb-2">
                       <button
@@ -269,6 +289,13 @@ export default function FeedPage() {
                         <MessageCircle size={18} />
                         <span className="text-neutral-500">{post.commentsCount}</span>
                       </Link>
+                      {/* Share button — one-tap social export */}
+                      <button
+                        onClick={() => handleSharePost(post)}
+                        className="flex items-center gap-1 text-sm text-neutral-400 transition hover:text-neutral-200 cursor-pointer ml-auto"
+                      >
+                        <Share2 size={16} />
+                      </button>
                     </div>
                     {post.caption && (
                       <p className="text-sm text-neutral-300">

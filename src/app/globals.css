@@ -213,6 +213,15 @@ html {
   100% { transform: translateX(-50%); }
 }
 
+/* ── Hide scrollbar for horizontal carousels (genre trending, budget filter) ── */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── Editorial serif heading styling for Playfair Display ── */
 .font-heading {
   font-family: var(--font-heading), Georgia, serif;

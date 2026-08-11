@@ -5,7 +5,7 @@ import { useSession, signOut } from "@/lib/auth/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Heart, Palette, Shirt, Settings, Camera, Calendar, Flame, Swords, TrendingUp, Leaf, Dna, ShoppingBag } from "lucide-react";
+import { Heart, Palette, Shirt, Settings, Camera, Calendar, Flame, Swords, TrendingUp, Leaf, Dna, ShoppingBag, CloudSun, Sparkles } from "lucide-react";
 import { StyleDnaCard } from "@/components/profile/StyleDnaCard";
 import { PageTransition } from "@/components/ui/PageTransition";
 
@@ -346,6 +346,20 @@ function ProfileContent() {
           <div>
             <p className="text-sm font-medium text-white">Shop</p>
             <p className="text-[10px] text-neutral-500 uppercase tracking-wider">For You</p>
+          </div>
+        </Link>
+        <Link href="/glow-up" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <Sparkles size={18} className="text-yellow-400" />
+          <div>
+            <p className="text-sm font-medium text-white">Glow-Up</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Transform</p>
+          </div>
+        </Link>
+        <Link href="/weather-outfit" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <CloudSun size={18} className="text-sky-400" />
+          <div>
+            <p className="text-sm font-medium text-white">Weather</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Today</p>
           </div>
         </Link>
       </div>
