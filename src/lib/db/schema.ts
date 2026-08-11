@@ -347,6 +347,123 @@ export const seasonalAudits = sqliteTable("seasonal_audits", {
   index("seasonal_user_season_idx").on(t.userId, t.season),
 ]);
 
+// ─── Outfit Posts (Social Feed) ──────────────────────
+// User-shared OOTD posts — the community feed backbone
+export const outfitPosts = sqliteTable("outfit_posts", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  imageUrl: text("image_url").notNull(), // outfit photo (Vercel Blob)
+  caption: text("caption"), // optional text (max 500 chars)
+  genreSlug: text("genre_slug").notNull(),
+  outfitId: text("outfit_id"), // optional link to a saved/generated outfit
+  // Denormalized counters — avoids COUNT queries on every feed load
+  likesCount: integer("likes_count").default(0),
+  commentsCount: integer("comments_count").default(0),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (t) => [
+  index("posts_user_idx").on(t.userId),
+  index("posts_genre_idx").on(t.genreSlug),
+  index("posts_created_idx").on(t.createdAt),
+]);
+
+// ─── Post Likes ─────────────────────────────────────
+export const postLikes = sqliteTable("post_likes", {
+  id: text("id").primaryKey(),
+  postId: text("post_id")
+    .notNull()
+    .references(() => outfitPosts.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (t) => [
+  index("likes_post_idx").on(t.postId),
+  index("likes_user_post_idx").on(t.userId, t.postId),
+]);
+
+// ─── Post Comments ──────────────────────────────────
+export const postComments = sqliteTable("post_comments", {
+  id: text("id").primaryKey(),
+  postId: text("post_id")
+    .notNull()
+    .references(() => outfitPosts.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (t) => [
+  index("comments_post_idx").on(t.postId),
+]);
+
+// ─── Follows ────────────────────────────────────────
+// Social graph — who follows whom
+export const follows = sqliteTable("follows", {
+  id: text("id").primaryKey(),
+  followerId: text("follower_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  followingId: text("following_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (t) => [
+  index("follows_follower_idx").on(t.followerId),
+  index("follows_following_idx").on(t.followingId),
+]);
+
+// ─── Taste Profiles ─────────────────────────────────
+// Computed taste dimensions from all user interactions — the proprietary moat
+// Re-computed periodically from ratings, streaks, engagement, and chat signals
+export const tasteProfiles = sqliteTable("taste_profiles", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // Weighted affinity maps — higher = stronger preference
+  colorAffinities: text("color_affinities", { mode: "json" }).$type<Record<string, number>>(),
+  brandAffinities: text("brand_affinities", { mode: "json" }).$type<Record<string, number>>(),
+  genreWeights: text("genre_weights", { mode: "json" }).$type<Record<string, number>>(),
+  // Price range derived from actual behavior (not self-reported)
+  priceMin: real("price_min"),
+  priceMax: real("price_max"),
+  priceMean: real("price_mean"),
+  // Style dimensions (0-1 scale) — axes of personal taste
+  formalityCasual: real("formality_casual"), // 0=very formal, 1=very casual
+  boldnessMinimal: real("boldness_minimal"), // 0=very bold, 1=very minimal
+  trendClassic: real("trend_classic"), // 0=very trendy, 1=very classic
+  // Confidence — more interactions = more reliable taste profile
+  totalInteractions: integer("total_interactions").default(0),
+  lastComputed: text("last_computed"),
+  updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+});
+
+// ─── Shopping Recommendations ───────────────────────
+// AI-generated "buy this to complete your wardrobe" suggestions
+// Links catalog items to wardrobe items they pair with
+export const shoppingRecommendations = sqliteTable("shopping_recommendations", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  catalogItemId: text("catalog_item_id")
+    .notNull()
+    .references(() => catalogItems.id),
+  reason: text("reason").notNull(), // "Completes 3 outfits in Old Money"
+  matchScore: real("match_score").notNull(), // 0-100 relevance
+  wardrobeItemIds: text("wardrobe_item_ids", { mode: "json" }).$type<string[]>(),
+  genreSlug: text("genre_slug").notNull(),
+  category: text("category").notNull(), // what category is missing
+  status: text("status").default("active"), // "active" | "dismissed" | "purchased"
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (t) => [
+  index("shop_recs_user_idx").on(t.userId),
+  index("shop_recs_user_status_idx").on(t.userId, t.status),
+]);
+
 // ─── Pre-Generated Outfits ──────────────────────────
 // Nightly cron batch results — 10 outfits per active user for instant morning display
 export const preGeneratedOutfits = sqliteTable("pre_generated_outfits", {

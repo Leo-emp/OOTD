@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Shirt, MessageCircle, Heart, User } from "lucide-react";
+import { Home, Shirt, MessageCircle, Users, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Bottom navigation items — each maps to a top-level app route
+// Feed replaces Saved (Saved is accessible from Profile page)
 const NAV_ITEMS = [
   { href: "/dashboard", icon: Home, label: "Home" },
   { href: "/wardrobe", icon: Shirt, label: "Wardrobe" },
   { href: "/stylist", icon: MessageCircle, label: "Stylist" },
-  { href: "/saved", icon: Heart, label: "Saved" },
+  { href: "/feed", icon: Users, label: "Community" },
   { href: "/profile", icon: User, label: "Profile" },
 ];
 

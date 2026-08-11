@@ -5,7 +5,7 @@ import { useSession, signOut } from "@/lib/auth/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Heart, Palette, Shirt, Settings, Camera, Calendar, Flame, Swords, TrendingUp, Leaf } from "lucide-react";
+import { Heart, Palette, Shirt, Settings, Camera, Calendar, Flame, Swords, TrendingUp, Leaf, Dna, ShoppingBag } from "lucide-react";
 import { StyleDnaCard } from "@/components/profile/StyleDnaCard";
 import { PageTransition } from "@/components/ui/PageTransition";
 
@@ -332,6 +332,20 @@ function ProfileContent() {
           <div>
             <p className="text-sm font-medium text-white">Seasonal</p>
             <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Refresh</p>
+          </div>
+        </Link>
+        <Link href="/taste" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <Dna size={18} className="text-indigo-400" />
+          <div>
+            <p className="text-sm font-medium text-white">Style DNA</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Taste Graph</p>
+          </div>
+        </Link>
+        <Link href="/shop" className="glass rounded-xl p-4 flex items-center gap-3 transition hover:bg-white/[0.06]">
+          <ShoppingBag size={18} className="text-pink-400" />
+          <div>
+            <p className="text-sm font-medium text-white">Shop</p>
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">For You</p>
           </div>
         </Link>
       </div>
