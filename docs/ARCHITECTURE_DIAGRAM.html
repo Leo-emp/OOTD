@@ -1,0 +1,424 @@
+<title>OOTD AI Architecture</title>
+<style>
+:root {
+  --bg: #0A0810;
+  --surface: #120E1A;
+  --text: #B0A8C0;
+  --text-dim: #5A4E6E;
+  --text-bright: #EAE6F0;
+  --coral: #FF6B6B;
+  --gold: #FFD93D;
+  --mint: #6BCB77;
+  --lavender: #A78BFA;
+  --sky: #4FC3F7;
+  --peach: #FF8A65;
+  --connector: #201830;
+}
+
+*,*::before,*::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  padding: 2rem 1.25rem;
+  min-height: 100vh;
+}
+.page { max-width: 1140px; margin: 0 auto; }
+
+header { text-align: center; margin-bottom: 1.5rem; }
+.eyebrow { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.22em; color: var(--coral); margin-bottom: 0.25rem; }
+h1 { font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace; font-size: 1.3rem; font-weight: 300; color: var(--text-bright); }
+.subtitle { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem; }
+
+.diagram-wrap { overflow-x: auto; margin-bottom: 1.2rem; }
+svg.arch { display: block; width: 100%; min-width: 780px; height: auto; }
+.node rect { transition: filter 0.2s; cursor: default; }
+.node:hover rect { filter: brightness(1.4) saturate(1.2); }
+.node text { pointer-events: none; user-select: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .flow-dash { stroke-dasharray: 6 4; animation: flowA 1.4s linear infinite; }
+  @keyframes flowA { to { stroke-dashoffset: -10; } }
+}
+
+.genre-bar {
+  display: flex; align-items: center; gap: 0.3rem; padding: 0.5rem 0.85rem;
+  background: #100A14; border: 1px solid #2A1838; border-radius: 7px;
+  margin-bottom: 1.2rem; overflow-x: auto;
+  font-size: 0.6rem; font-family: ui-monospace, monospace;
+}
+.genre-label { font-weight: 700; color: var(--coral); letter-spacing: 0.1em; white-space: nowrap; margin-right: 0.2rem; }
+.genre-item { color: var(--text-dim); white-space: nowrap; padding: 0.12rem 0.4rem; background: #140E1C; border-radius: 3px; border: 1px solid #221838; }
+
+.stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+  gap: 0.55rem; margin-bottom: 1.2rem;
+}
+.stat { background: var(--surface); border: 1px solid #201830; border-radius: 5px; padding: 0.55rem 0.65rem; text-align: center; }
+.stat-val { display: block; font-family: ui-monospace, monospace; font-size: 1rem; font-weight: 600; color: var(--text-bright); font-variant-numeric: tabular-nums; }
+.stat-lbl { display: block; font-size: 0.58rem; color: var(--text-dim); margin-top: 0.1rem; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.85rem; justify-content: center; font-size: 0.65rem; color: var(--text-dim); }
+.legend-item { display: flex; align-items: center; gap: 0.3rem; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.footer { text-align: center; margin-top: 1.4rem; font-size: 0.58rem; color: var(--text-dim); opacity: 0.5; }
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow">OOTD AI</p>
+    <h1>System Architecture</h1>
+    <p class="subtitle">Agentic outfit pipeline, RAG semantic search, taste graph, 12 genres, body + color aware</p>
+  </header>
+
+  <div class="diagram-wrap">
+    <svg class="arch" viewBox="0 0 1080 680" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="grid" width="22" height="22" patternUnits="userSpaceOnUse">
+          <path d="M22 0L0 0 0 22" fill="none" stroke="#120E1A" stroke-width="0.4"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)"/>
+
+      <!-- === LAYER LABELS === -->
+      <text transform="rotate(-90,16,55)" x="16" y="55" text-anchor="middle"
+            fill="#4FC3F7" font-size="7" font-weight="700" letter-spacing="0.14em" font-family="system-ui" opacity="0.45">INTERFACE</text>
+      <text transform="rotate(-90,16,195)" x="16" y="195" text-anchor="middle"
+            fill="#A78BFA" font-size="7" font-weight="700" letter-spacing="0.14em" font-family="system-ui" opacity="0.45">AI ENGINE</text>
+      <text transform="rotate(-90,16,370)" x="16" y="370" text-anchor="middle"
+            fill="#FF6B6B" font-size="7" font-weight="700" letter-spacing="0.14em" font-family="system-ui" opacity="0.45">STYLING</text>
+      <text transform="rotate(-90,16,520)" x="16" y="520" text-anchor="middle"
+            fill="#FFD93D" font-size="7" font-weight="700" letter-spacing="0.14em" font-family="system-ui" opacity="0.45">LEARNING</text>
+      <text transform="rotate(-90,16,640)" x="16" y="640" text-anchor="middle"
+            fill="#6BCB77" font-size="7" font-weight="700" letter-spacing="0.14em" font-family="system-ui" opacity="0.45">DATA</text>
+
+      <!-- === USER DASHBOARD === -->
+      <g class="node">
+        <title>User dashboard: style quiz, wardrobe, outfits, feed, discover, shop, glow-up, weather outfits</title>
+        <rect x="100" y="14" width="600" height="44" rx="6"
+              fill="#0C1428" stroke="#4FC3F7" stroke-width="1.6"/>
+        <text x="400" y="34" text-anchor="middle" fill="#EAE6F0"
+              font-size="12" font-weight="700" font-family="system-ui">USER DASHBOARD</text>
+        <text x="400" y="49" text-anchor="middle" fill="#5A4E6E"
+              font-size="8" font-family="ui-monospace, monospace">quiz · wardrobe · outfits · feed · discover · shop · glow-up</text>
+      </g>
+
+      <!-- API bar -->
+      <g class="node">
+        <title>50 API routes across outfits, wardrobe, chat, quiz, genres, shop, weather, feed, streaks, pinterest, taste</title>
+        <rect x="100" y="75" width="600" height="30" rx="4"
+              fill="#0C1428" stroke="#4FC3F7" stroke-width="1"/>
+        <text x="400" y="94" text-anchor="middle" fill="#5A4E6E"
+              font-size="8" font-family="ui-monospace, monospace">50 API ROUTES: /outfits · /wardrobe · /chat · /quiz · /genres · /weather · /taste · /shop</text>
+      </g>
+
+      <!-- Style quiz (right side, top) -->
+      <text x="745" y="28" fill="#FF6B6B" font-size="7.5" font-weight="700"
+            letter-spacing="0.12em" font-family="system-ui" opacity="0.5">ONBOARDING</text>
+      <g class="node">
+        <title>Style Quiz: 12-genre classification, body type, color preferences, lifestyle, budget</title>
+        <rect x="745" y="38" width="145" height="68" rx="5"
+              fill="#1A0A10" stroke="#FF6B6B" stroke-width="1" opacity="0.7"/>
+        <text x="817" y="58" text-anchor="middle" fill="#EAE6F0" font-size="10" font-weight="600" font-family="system-ui">Style Quiz</text>
+        <text x="817" y="73" text-anchor="middle" fill="#5A4E6E" font-size="7.5" font-family="ui-monospace, monospace">genre detection</text>
+        <text x="817" y="86" text-anchor="middle" fill="#5A4E6E" font-size="7.5" font-family="ui-monospace, monospace">body · color · budget</text>
+        <text x="817" y="99" text-anchor="middle" fill="#5A4E6E" font-size="7.5" font-family="ui-monospace, monospace">→ style profile</text>
+      </g>
+
+      <!-- === AI ENGINE LAYER === -->
+      <!-- Agentic Pipeline -->
+      <g class="node">
+        <title>Agentic Pipeline: 5-step tool chain — analyze wardrobe → detect gaps → semantic search → generate outfits → verify style</title>
+        <rect x="50" y="140" width="250" height="62" rx="5"
+              fill="#14082A" stroke="#A78BFA" stroke-width="1.4"/>
+        <text x="175" y="162" text-anchor="middle" fill="#EAE6F0"
+              font-size="11" font-weight="600" font-family="system-ui">Agentic Pipeline</text>
+        <text x="175" y="177" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">1. analyze wardrobe</text>
+        <text x="175" y="189" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">2. gaps → 3. RAG search → 4. generate → 5. verify</text>
+      </g>
+
+      <!-- RAG Embeddings -->
+      <g class="node">
+        <title>RAG Engine: Gemini text-embedding-004, 768-dim vectors, cosine similarity, batch processing</title>
+        <rect x="320" y="140" width="195" height="62" rx="5"
+              fill="#14082A" stroke="#A78BFA" stroke-width="1.4"/>
+        <text x="417" y="162" text-anchor="middle" fill="#EAE6F0"
+              font-size="11" font-weight="600" font-family="system-ui">RAG Embeddings</text>
+        <text x="417" y="177" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">Gemini text-embedding-004</text>
+        <text x="417" y="189" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">768-dim · cosine similarity</text>
+      </g>
+
+      <!-- AI Chat Stylist -->
+      <g class="node">
+        <title>AI Stylist Chat: conversational interface with wardrobe + preference context, natural language requests</title>
+        <rect x="535" y="140" width="175" height="62" rx="5"
+              fill="#14082A" stroke="#A78BFA" stroke-width="1.4"/>
+        <text x="622" y="162" text-anchor="middle" fill="#EAE6F0"
+              font-size="11" font-weight="600" font-family="system-ui">AI Stylist Chat</text>
+        <text x="622" y="177" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">conversational UI</text>
+        <text x="622" y="189" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">wardrobe + pref context</text>
+      </g>
+
+      <!-- Fallback Chain -->
+      <g class="node">
+        <title>3-Tier Fallback: Gemini AI (2-5s) → Redis cache (&lt;100ms) → Editor's picks (&lt;50ms, 48 curated outfits)</title>
+        <rect x="50" y="220" width="250" height="50" rx="5"
+              fill="#14082A" stroke="#A78BFA" stroke-width="1.2"/>
+        <text x="175" y="242" text-anchor="middle" fill="#EAE6F0"
+              font-size="10" font-weight="600" font-family="system-ui">3-Tier Fallback Chain</text>
+        <text x="175" y="258" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">Gemini → Redis cache → 48 editor's picks</text>
+      </g>
+
+      <!-- Prompt Builder -->
+      <g class="node">
+        <title>Prompt Builder: genre rules + body type + color theory + weather + occasion injected per request</title>
+        <rect x="320" y="220" width="195" height="50" rx="5"
+              fill="#14082A" stroke="#A78BFA" stroke-width="1.2"/>
+        <text x="417" y="242" text-anchor="middle" fill="#EAE6F0"
+              font-size="10" font-weight="600" font-family="system-ui">Prompt Builder</text>
+        <text x="417" y="258" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">genre + body + color + weather</text>
+      </g>
+
+      <!-- Guardrails -->
+      <g class="node">
+        <title>Guardrails: input sanitization, output schema validation, prompt injection prevention, eval test suite</title>
+        <rect x="535" y="220" width="175" height="50" rx="5"
+              fill="#14082A" stroke="#A78BFA" stroke-width="1.2"/>
+        <text x="622" y="242" text-anchor="middle" fill="#EAE6F0"
+              font-size="10" font-weight="600" font-family="system-ui">Guardrails</text>
+        <text x="622" y="258" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">sanitize · validate · evals</text>
+      </g>
+
+      <!-- === STYLING LAYER === -->
+      <!-- Genre Rulesets -->
+      <g class="node">
+        <title>12 Genre Rulesets: DB-driven, color palette, fit rules, must-have/forbidden, occasion modifiers per genre</title>
+        <rect x="50" y="330" width="230" height="58" rx="5"
+              fill="#1A0A10" stroke="#FF6B6B" stroke-width="1.4"/>
+        <text x="165" y="352" text-anchor="middle" fill="#EAE6F0"
+              font-size="11" font-weight="600" font-family="system-ui">12 Genre Rulesets</text>
+        <text x="165" y="367" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">DB-driven · zero-code add</text>
+        <text x="165" y="380" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">palette · fit · forbidden · occasion</text>
+      </g>
+
+      <!-- Body Rules -->
+      <g class="node">
+        <title>Body Rules: body type → silhouette mapping, proportion balancing, flattering fit selection</title>
+        <rect x="300" y="330" width="175" height="58" rx="5"
+              fill="#1A0A10" stroke="#FF6B6B" stroke-width="1.4"/>
+        <text x="387" y="352" text-anchor="middle" fill="#EAE6F0"
+              font-size="11" font-weight="600" font-family="system-ui">Body Rules</text>
+        <text x="387" y="367" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">silhouette matching</text>
+        <text x="387" y="380" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">proportion balancing</text>
+      </g>
+
+      <!-- Color Theory -->
+      <g class="node">
+        <title>Color Theory: seasonal analysis, complementary palettes, contrast rules, skin tone matching</title>
+        <rect x="495" y="330" width="175" height="58" rx="5"
+              fill="#1A0A10" stroke="#FF6B6B" stroke-width="1.4"/>
+        <text x="582" y="352" text-anchor="middle" fill="#EAE6F0"
+              font-size="11" font-weight="600" font-family="system-ui">Color Theory</text>
+        <text x="582" y="367" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">seasonal analysis</text>
+        <text x="582" y="380" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">skin tone matching</text>
+      </g>
+
+      <!-- Wardrobe -->
+      <g class="node">
+        <title>Wardrobe Manager: photo upload, color extraction, category tagging, brand detection, owned-first logic</title>
+        <rect x="50" y="410" width="230" height="50" rx="5"
+              fill="#0C1428" stroke="#4FC3F7" stroke-width="1.3"/>
+        <text x="165" y="432" text-anchor="middle" fill="#EAE6F0"
+              font-size="10.5" font-weight="600" font-family="system-ui">Wardrobe Manager</text>
+        <text x="165" y="450" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">upload · tag · color extract · owned-first</text>
+      </g>
+
+      <!-- Catalog + Shop -->
+      <g class="node">
+        <title>Product Catalog: semantic search, affiliate links, price filtering, brand matching, Pinterest vibe import</title>
+        <rect x="300" y="410" width="175" height="50" rx="5"
+              fill="#0C1428" stroke="#4FC3F7" stroke-width="1.3"/>
+        <text x="387" y="432" text-anchor="middle" fill="#EAE6F0"
+              font-size="10.5" font-weight="600" font-family="system-ui">Catalog + Shop</text>
+        <text x="387" y="450" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">search · affiliate · Pinterest</text>
+      </g>
+
+      <!-- Weather -->
+      <g class="node">
+        <title>Weather Engine: location-based weather, temperature-aware outfit adaptation, seasonal refresh</title>
+        <rect x="495" y="410" width="175" height="50" rx="5"
+              fill="#0C1428" stroke="#4FC3F7" stroke-width="1.3"/>
+        <text x="582" y="432" text-anchor="middle" fill="#EAE6F0"
+              font-size="10.5" font-weight="600" font-family="system-ui">Weather Engine</text>
+        <text x="582" y="450" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">location · temp · seasonal</text>
+      </g>
+
+      <!-- === LEARNING LAYER === -->
+      <!-- Taste Graph -->
+      <g class="node">
+        <title>Taste Graph: 3-axis profiling (formality, boldness, trend), weighted rating accumulation, genre mapping</title>
+        <rect x="50" y="500" width="250" height="56" rx="5"
+              fill="#1A1408" stroke="#FFD93D" stroke-width="1.4"/>
+        <text x="175" y="522" text-anchor="middle" fill="#EAE6F0"
+              font-size="11" font-weight="600" font-family="system-ui">Taste Graph</text>
+        <text x="175" y="537" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">3-axis: formality · boldness · trend</text>
+        <text x="175" y="550" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">love/like/skip/hate + implicit signals</text>
+      </g>
+
+      <!-- Engagement -->
+      <g class="node">
+        <title>Engagement Engine: implicit signals (view 0.05, click 0.15, save 0.3), streaks, challenges, XP, glow-up</title>
+        <rect x="320" y="500" width="195" height="56" rx="5"
+              fill="#1A1408" stroke="#FFD93D" stroke-width="1.4"/>
+        <text x="417" y="522" text-anchor="middle" fill="#EAE6F0"
+              font-size="11" font-weight="600" font-family="system-ui">Engagement</text>
+        <text x="417" y="537" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">implicit signals · streaks</text>
+        <text x="417" y="550" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">challenges · XP · glow-up</text>
+      </g>
+
+      <!-- Style Evolution -->
+      <g class="node">
+        <title>Style Evolution: taste profile history, genre drift tracking, glow-up visualization</title>
+        <rect x="535" y="500" width="175" height="56" rx="5"
+              fill="#1A1408" stroke="#FFD93D" stroke-width="1.4"/>
+        <text x="622" y="522" text-anchor="middle" fill="#EAE6F0"
+              font-size="10.5" font-weight="600" font-family="system-ui">Style Evolution</text>
+        <text x="622" y="537" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">taste history</text>
+        <text x="622" y="550" text-anchor="middle" fill="#5A4E6E"
+              font-size="7.5" font-family="ui-monospace, monospace">genre drift · glow-up</text>
+      </g>
+
+      <!-- === DATA LAYER === -->
+      <g class="node">
+        <title>Data Layer: Drizzle ORM, SQLite/Turso, 27 tables, Better Auth, Stripe, Redis cache, PostHog analytics</title>
+        <rect x="50" y="605" width="660" height="45" rx="6"
+              fill="#081A0C" stroke="#6BCB77" stroke-width="1.4"/>
+        <text x="380" y="625" text-anchor="middle" fill="#EAE6F0"
+              font-size="11" font-weight="700" font-family="system-ui">DATA LAYER</text>
+        <text x="380" y="641" text-anchor="middle" fill="#5A4E6E"
+              font-size="8" font-family="ui-monospace, monospace">Drizzle ORM · SQLite/Turso · 27 tables · Better Auth · Stripe · Redis · PostHog</text>
+      </g>
+
+      <!-- External services -->
+      <text x="760" y="140" fill="#FF8A65" font-size="7.5" font-weight="700"
+            letter-spacing="0.12em" font-family="system-ui" opacity="0.5">SERVICES</text>
+      <g>
+        <rect x="760" y="152" width="145" height="175" rx="5"
+              fill="#1A1008" stroke="#FF8A65" stroke-width="1" opacity="0.4"/>
+        <text x="832" y="172" text-anchor="middle" fill="#B0A8C0" font-size="9" font-family="ui-monospace, monospace">Gemini AI</text>
+        <text x="832" y="192" text-anchor="middle" fill="#B0A8C0" font-size="9" font-family="ui-monospace, monospace">Gemini Embed</text>
+        <text x="832" y="212" text-anchor="middle" fill="#B0A8C0" font-size="9" font-family="ui-monospace, monospace">Better Auth</text>
+        <text x="832" y="232" text-anchor="middle" fill="#B0A8C0" font-size="9" font-family="ui-monospace, monospace">Stripe</text>
+        <text x="832" y="252" text-anchor="middle" fill="#B0A8C0" font-size="9" font-family="ui-monospace, monospace">Redis</text>
+        <text x="832" y="272" text-anchor="middle" fill="#B0A8C0" font-size="9" font-family="ui-monospace, monospace">PostHog</text>
+        <text x="832" y="292" text-anchor="middle" fill="#B0A8C0" font-size="9" font-family="ui-monospace, monospace">Pinterest API</text>
+        <text x="832" y="318" text-anchor="middle" fill="#5A4E6E" font-size="7.5" font-family="ui-monospace, monospace">7 integrations</text>
+      </g>
+
+      <!-- === CONNECTIONS === -->
+      <!-- Dashboard to API -->
+      <path d="M400,58 V75" stroke="#201830" stroke-width="1.2" fill="none" class="flow-dash"/>
+
+      <!-- API to AI engine -->
+      <path d="M400,105 V125" stroke="#201830" stroke-width="1" fill="none" opacity="0.4"/>
+      <path d="M175,125 H622" stroke="#201830" stroke-width="0.8" fill="none" opacity="0.25"/>
+      <path d="M175,125 V140 M417,125 V140 M622,125 V140"
+            stroke="#201830" stroke-width="1.2" fill="none" class="flow-dash"/>
+
+      <!-- AI engine internal -->
+      <path d="M175,202 V220 M417,202 V220 M622,202 V220"
+            stroke="#201830" stroke-width="1" fill="none" opacity="0.3"/>
+
+      <!-- AI to styling -->
+      <path d="M175,270 V310 M417,270 V310 M622,270 V310"
+            stroke="#201830" stroke-width="1" fill="none" opacity="0.35"/>
+      <path d="M165,310 H582" stroke="#201830" stroke-width="0.8" fill="none" opacity="0.2"/>
+      <path d="M165,310 V330 M387,310 V330 M582,310 V330"
+            stroke="#201830" stroke-width="1.2" fill="none" class="flow-dash"/>
+
+      <!-- Styling to features -->
+      <path d="M165,388 V410 M387,388 V410 M582,388 V410"
+            stroke="#201830" stroke-width="1" fill="none" opacity="0.3"/>
+
+      <!-- Features to learning -->
+      <path d="M165,460 V485 M387,460 V485 M582,460 V485"
+            stroke="#201830" stroke-width="1" fill="none" opacity="0.35"/>
+      <path d="M175,485 H622" stroke="#201830" stroke-width="0.8" fill="none" opacity="0.2"/>
+      <path d="M175,485 V500 M417,485 V500 M622,485 V500"
+            stroke="#201830" stroke-width="1.2" fill="none" class="flow-dash"/>
+
+      <!-- Learning to data -->
+      <path d="M175,556 V605 M417,556 V605 M622,556 V605"
+            stroke="#201830" stroke-width="1" fill="none" opacity="0.3"/>
+
+      <!-- Taste feedback loop -->
+      <path d="M50,528 H35 V245 H50" stroke="#FFD93D" stroke-width="1" stroke-dasharray="4 3" fill="none" opacity="0.3"/>
+      <text transform="rotate(-90,40,390)" x="40" y="390" text-anchor="middle"
+            fill="#FFD93D" font-size="6.5" font-family="ui-monospace, monospace" opacity="0.35">TASTE → RECOMMEND</text>
+
+    </svg>
+  </div>
+
+  <div class="genre-bar">
+    <span class="genre-label">12 GENRES</span>
+    <span class="genre-item">Old Money</span>
+    <span class="genre-item">Minimalist</span>
+    <span class="genre-item">Streetwear</span>
+    <span class="genre-item">Cottagecore</span>
+    <span class="genre-item">Dark Academia</span>
+    <span class="genre-item">Y2K</span>
+    <span class="genre-item">Coastal Grandma</span>
+    <span class="genre-item">Grunge</span>
+    <span class="genre-item">Coquette</span>
+    <span class="genre-item">Gorpcore</span>
+    <span class="genre-item">Clean Girl</span>
+    <span class="genre-item">Indie Boho</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span class="stat-val">25,000+</span><span class="stat-lbl">Lines of TypeScript</span></div>
+    <div class="stat"><span class="stat-val">186</span><span class="stat-lbl">Source Files</span></div>
+    <div class="stat"><span class="stat-val">50</span><span class="stat-lbl">API Routes</span></div>
+    <div class="stat"><span class="stat-val">27</span><span class="stat-lbl">DB Tables</span></div>
+    <div class="stat"><span class="stat-val">10</span><span class="stat-lbl">AI Modules</span></div>
+    <div class="stat"><span class="stat-val">12</span><span class="stat-lbl">Genres</span></div>
+    <div class="stat"><span class="stat-val">768</span><span class="stat-lbl">Embed Dims</span></div>
+    <div class="stat"><span class="stat-val">48</span><span class="stat-lbl">Fallback Outfits</span></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:#4FC3F7"></span>Interface</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#A78BFA"></span>AI Engine</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#FF6B6B"></span>Styling</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#FFD93D"></span>Learning</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#6BCB77"></span>Data</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#FF8A65"></span>Services</div>
+  </div>
+
+  <p class="footer">OOTD AI &middot; github.com/Leo-emp/OOTD</p>
+</div>
