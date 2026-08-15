@@ -9,62 +9,33 @@ Built as a production-grade Next.js application: **25,000+ lines of TypeScript**
 ## Architecture
 
 ```mermaid
-graph TB
-    subgraph UI["USER DASHBOARD"]
-        UD[Style quiz · Wardrobe · Outfits<br/>Feed · Discover · Shop · Chat]
-    end
+graph TD
+    UI[User Dashboard] --> API[50 API Routes]
 
-    subgraph API["50 API ROUTES"]
-        OF[/outfits · /wardrobe · /chat]
-        QZ[/quiz · /genres · /taste]
-        SH[/shop · /weather · /feed]
-        EN[/engagement · /streaks<br/>/pinterest · /challenges]
-    end
+    API --> AGENT[Agentic AI Pipeline]
+    AGENT --> S1[Step 1: Analyze Wardrobe]
+    S1 --> S2[Step 2: Gap Detection]
+    S2 --> S3[Step 3: Semantic Search - RAG 768-dim]
+    S3 --> S4[Step 4: Outfit Generation]
+    S4 --> S5[Step 5: Style Verification]
 
-    subgraph Agent["AGENTIC AI PIPELINE"]
-        S1["Step 1: Analyze Wardrobe<br/>Categorize + identify gaps"]
-        S2["Step 2: Gap Detection<br/>Genre requirements vs owned"]
-        S3["Step 3: Semantic Search<br/>RAG 768-dim embeddings"]
-        S4["Step 4: Outfit Generation<br/>Genre rules + body + color"]
-        S5["Step 5: Style Verification<br/>Constraint check + dedup"]
-    end
+    AGENT --> TASTE[Taste Engine]
+    TASTE --> TG[Taste Graph - formality, boldness, trend]
+    TASTE --> IM[Implicit Signals - views, clicks, saves]
+    TASTE --> PIN[Pinterest Vibe Match]
 
-    subgraph Taste["TASTE ENGINE"]
-        TG[Taste Graph<br/>3-axis: formality<br/>boldness · trend]
-        IM[Implicit Signals<br/>Views 0.05 · Clicks 0.15<br/>Saves 0.3 · Time-on-item]
-        PN[Pinterest Vibe Match<br/>Board → genre mapping]
-    end
+    AGENT --> STYLE[Styling Engine]
+    STYLE --> GR[12 Genre Rulesets]
+    STYLE --> BR[Body Rules - silhouette matching]
+    STYLE --> CT[Color Theory - seasonal palettes]
 
-    subgraph Styling["STYLING ENGINE"]
-        GR[12 Genre Rulesets<br/>Color · fit · must-have<br/>· forbidden · occasion]
-        BR[Body Rules<br/>Silhouette matching<br/>proportion balancing]
-        CT[Color Theory<br/>Seasonal analysis<br/>complementary palettes]
-    end
+    S4 --> FB[3-Tier Fallback]
+    FB --> T1[Tier 1: Gemini AI]
+    FB --> T2[Tier 2: Redis Cache]
+    FB --> T3[Tier 3: 48 Editor Picks]
 
-    subgraph Fallback["3-TIER FALLBACK"]
-        T1[Tier 1: Gemini AI<br/>2-5s · personalized]
-        T2[Tier 2: Redis Cache<br/>100ms · recent results]
-        T3[Tier 3: Editor's Picks<br/>50ms · 48 curated outfits]
-    end
-
-    subgraph Data["DATA LAYER"]
-        DB[(Drizzle ORM<br/>SQLite / Turso<br/>27 tables)]
-        AU[Better Auth]
-        SP[Stripe · PostHog]
-    end
-
-    UI --> API
-    API --> Agent
-    S1 --> S2 --> S3 --> S4 --> S5
-    Agent --> Taste & Styling
-    S3 --> DB
-    Agent --> Fallback
-    Fallback --> Data
-
-    style Agent fill:#1a1a2e,stroke:#FB7185,color:#fff
-    style Taste fill:#1a1a2e,stroke:#F59E0B,color:#fff
-    style Styling fill:#1a1a2e,stroke:#A78BFA,color:#fff
-    style Fallback fill:#1a1a2e,stroke:#10B981,color:#fff
+    S3 --> DB[(Drizzle ORM - SQLite/Turso - 27 tables)]
+    API --> AUTH[Better Auth + Stripe + PostHog]
 ```
 
 ## Problem Statement
