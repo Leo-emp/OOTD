@@ -420,5 +420,82 @@ svg.arch { display: block; width: 100%; min-width: 780px; height: auto; }
     <div class="legend-item"><span class="legend-dot" style="background:#FF8A65"></span>Services</div>
   </div>
 
+  <style>
+    .justifications { margin-top: 2rem; border-top: 1px solid #1A2838; padding-top: 1.5rem; }
+    .justifications h2 { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.18em; color: #FF6B6B; margin-bottom: 1rem; }
+    .just-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+    .just-card { background: #0D1B2A; border: 1px solid #1A2838; border-radius: 6px; padding: 0.85rem 1rem; }
+    .just-card h3 { font-size: 0.8rem; font-weight: 600; color: #E0E6ED; margin-bottom: 0.3rem; }
+    .just-card .tech { font-size: 0.65rem; color: #A78BFA; font-family: ui-monospace, monospace; margin-bottom: 0.4rem; }
+    .just-card p { font-size: 0.72rem; line-height: 1.55; color: #8892A0; }
+    .just-card .alt { font-size: 0.65rem; color: #5A6370; margin-top: 0.35rem; font-style: italic; }
+  </style>
+
+  <div class="justifications">
+    <h2>TECHNOLOGY JUSTIFICATIONS</h2>
+    <div class="just-grid">
+      <div class="just-card">
+        <h3>Agentic AI Pipeline (5 Steps)</h3>
+        <div class="tech">Core Architecture</div>
+        <p>Fashion recommendation is not a single inference — it requires sequential reasoning: understand the occasion, recall preferences, match to genres, apply body/color rules, then curate. The agentic pipeline breaks this into 5 discrete steps where each agent receives the prior agent's output. This makes failures debuggable (which step broke?) and allows individual steps to be improved independently.</p>
+        <p class="alt">Rejected: single prompt (too many concerns for one call), RAG-only (no reasoning chain), rule-based (can't understand occasion context)</p>
+      </div>
+      <div class="just-card">
+        <h3>RAG Semantic Search (768-dim)</h3>
+        <div class="tech">Retrieval System</div>
+        <p>Users describe outfits in natural language ("something cozy for a bookshop date") — keyword search fails because fashion vocabulary is subjective. Gemini text-embedding-004 generates 768-dimensional vectors, enabling semantic similarity search across the wardrobe and inspiration databases. Cosine similarity finds items that match the vibe, not just the words.</p>
+        <p class="alt">Rejected: keyword search (misses subjective language), full-text search (no semantic understanding), smaller embeddings (insufficient fashion nuance)</p>
+      </div>
+      <div class="just-card">
+        <h3>Taste Graph (3-Axis)</h3>
+        <div class="tech">Personalization Engine</div>
+        <p>Style preference is multi-dimensional: a user can prefer formal silhouettes but bold colors with vintage trends. The taste graph tracks three axes — formality (0-1), boldness (0-1), trend-sensitivity (0-1) — updated after every interaction. This compact representation captures meaningful style differences without the cold-start problem of collaborative filtering.</p>
+        <p class="alt">Rejected: collaborative filtering (cold start), single preference score (oversimplified), explicit surveys (users can't articulate taste)</p>
+      </div>
+      <div class="just-card">
+        <h3>12 Genre Ruleset System</h3>
+        <div class="tech">Fashion Intelligence</div>
+        <p>Each fashion genre (Old Money, Streetwear, Cottagecore, etc.) has distinct rules about silhouettes, acceptable fabrics, color palettes, and accessory pairing. These are encoded as structured rulesets — not embedded in prompts — so the AI agent references concrete constraints. This prevents the AI from recommending a graphic hoodie in an Old Money outfit.</p>
+        <p class="alt">Rejected: free-form AI (genre boundaries violated), single style system (ignores subculture rules), user-defined rules (too complex for users)</p>
+      </div>
+      <div class="just-card">
+        <h3>Body-Aware Styling Rules</h3>
+        <div class="tech">Inclusive Fit Engine</div>
+        <p>Body proportions affect how garments look — high-waisted pants elongate shorter torsos, oversized tops overwhelm petite frames. The engine encodes proportion-based rules (not size-based) so recommendations flatter the user's actual proportions. This replaces the fashion industry's "body type" labels with neutral geometric relationships.</p>
+        <p class="alt">Rejected: size-only matching (ignores proportions), body-type labels (outdated, stigmatizing), no body awareness (poor fit recommendations)</p>
+      </div>
+      <div class="just-card">
+        <h3>Color Theory Engine</h3>
+        <div class="tech">Visual Harmony</div>
+        <p>Outfit coordination requires understanding color relationships — complementary, analogous, triadic — plus seasonal undertone matching (warm/cool). The engine validates color combinations before presenting outfits, preventing clashing palettes. It also accounts for neutral anchoring (every outfit needs a grounding neutral) and accent ratios.</p>
+        <p class="alt">Rejected: AI-only color judgment (inconsistent), predefined palettes (too rigid), no color logic (frequent clashes in recommendations)</p>
+      </div>
+      <div class="just-card">
+        <h3>3-Tier Fallback System</h3>
+        <div class="tech">Reliability</div>
+        <p>AI API failures cannot leave users with an empty screen. Tier 1: live Gemini generation with full pipeline. Tier 2: cached recommendations from similar past requests (semantic similarity on the request embedding). Tier 3: 48 pre-curated outfits spanning all 12 genres and 4 occasions. Every request returns something useful, regardless of API state.</p>
+        <p class="alt">Rejected: single AI path (fragile), error messages (unacceptable UX), retry loops (slow, still fail)</p>
+      </div>
+      <div class="just-card">
+        <h3>Pinterest Vibe Match</h3>
+        <div class="tech">Visual Inspiration</div>
+        <p>Users often know what they want visually but can't describe it. Pinterest vibe match lets users paste inspiration images — the system extracts color palette, silhouette style, and genre markers via Gemini vision, then maps these to the taste graph axes. This bridges the gap between visual inspiration and actionable wardrobe recommendations.</p>
+        <p class="alt">Rejected: text-only input (misses visual intent), image classification (too coarse), manual tagging (friction kills adoption)</p>
+      </div>
+      <div class="just-card">
+        <h3>Gemini AI (Multi-Modal)</h3>
+        <div class="tech">AI Foundation</div>
+        <p>Fashion requires both text reasoning (occasion parsing, style rules) and vision (image analysis, color extraction). Gemini handles both modalities natively — no separate vision API needed. The long context window accommodates full genre rulesets + user history + wardrobe catalog in a single prompt. Cost-effective for per-request AI at consumer pricing.</p>
+        <p class="alt">Rejected: GPT-4V (cost prohibitive for consumer app), CLIP (embeddings only, no reasoning), separate text+vision models (integration complexity)</p>
+      </div>
+      <div class="just-card">
+        <h3>Drizzle ORM + SQLite/Turso</h3>
+        <div class="tech">Database (27 Tables)</div>
+        <p>27 tables model the fashion domain: users, wardrobes, items, outfits, taste profiles, genre preferences, color palettes, body measurements, recommendations, feedback, and embeddings. Drizzle provides type-safe queries with zero runtime overhead. SQLite on Turso gives global edge reads with single-writer simplicity — ideal for a read-heavy recommendation workload.</p>
+        <p class="alt">Rejected: Prisma (heavier runtime, slower cold starts), Postgres (connection pooling overhead), MongoDB (relational wardrobe data needs joins)</p>
+      </div>
+    </div>
+  </div>
+
   <p class="footer">OOTD AI &middot; github.com/Leo-emp/OOTD</p>
 </div>
